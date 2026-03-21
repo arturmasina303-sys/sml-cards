@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SML Карточки</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: linear-gradient(135deg, #0a0f2a, #0a1a3a);
+            font-family: 'Segoe UI', Arial, sans-serif;
+            padding: 20px;
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .card {
+            background: #1a2a4a;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .menu-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .menu-btn {
+            flex: 1;
+            background: #2a3a5a;
+            border: none;
+            color: white;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .menu-btn.active {
+            background: #e94560;
+        }
+        .pack-btn {
+            background: linear-gradient(135deg, #e94560, #b52b43);
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            border: none;
+            color: white;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .shop-item {
+            background: #0f1422;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .shop-price {
+            background: #ffd966;
+            color: #1a2a4a;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        .shop-btn {
+            background: #e94560;
+            border: none;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        .result-area {
+            background: #0f1422;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            margin-top: 15px;
+        }
+        .player-name {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .stars {
+            font-size: 32px;
+            margin: 10px 0;
+        }
+        .timer {
+            font-size: 14px;
+            color: #aaa;
+            margin-top: 15px;
+            text-align: center;
+        }
+        .collection-list {
+            max-height: 400px;
+            overflow-y: auto;
+            text-align: left;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="menu-buttons">
+            <button class="menu-btn" onclick="showSection('pack')">📦 Пак</button>
+            <button class="menu-btn" onclick="showSection('collection')">📋 Коллекция</button>
+            <button class="menu-btn" onclick="showSection('shop')">🛒 Магазин</button>
+        </div>
+
+        <div id="packSection" class="card">
+            <button class="pack-btn" onclick="openFreePack()">📦 ОТКРЫТЬ БЕСПЛАТНЫЙ ПАК</button>
+            <div class="timer" id="timer">✅ Пак доступен</div>
+            <div id="packResult" class="result-area">
+                <p>Нажми кнопку</p>
+            </div>
+        </div>
+
+        <div id="collectionSection" class="card hidden">
+            <h3>🎴 Коллекция</h3>
+            <div id="collectionList" class="collection-list">
+                <p>Загрузка...</p>
+            </div>
+        </div>
+
+        <div id="shopSection" class="card hidden">
+            <h3>🛒 Магазин паков</h3>
+            <div class="shop-item">
+                <div><b>⭐ Пак 1⭐</b><br><small>Гарантированный игрок 1⭐</small></div>
+                <div class="shop-price">5 ⭐</div>
+                <button class="shop-btn" onclick="buyPack(1, 5)">Купить</button>
+            </div>
+            <div class="shop-item">
+                <div><b>⭐⭐ Пак 2⭐</b><br><small>Гарантированный игрок 2⭐</small></div>
+                <div class="shop-price">15 ⭐</div>
+                <button class="shop-btn" onclick="buyPack(2, 15)">Купить</button>
+            </div>
+            <div class="shop-item">
+                <div><b>⭐⭐⭐ Пак 3⭐</b><br><small>Гарантированный игрок 3⭐</small></div>
+                <div class="shop-price">30 ⭐</div>
+                <button class="shop-btn" onclick="buyPack(3, 30)">Купить</button>
+            </div>
+            <div id="shopResult" class="result-area">
+                <p>Выбери пак</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.ready();
+        
+        const players = {
+            1: ["Fati", "Pedri", "Gavi", "Camavinga", "Gravenberch", "Moukoko", "Bellingham"],
+            2: ["Odegaard", "Saka", "Foden", "Musiala", "Wirtz", "Kvaratskhelia", "Leao"],
+            3: ["Rodri", "Kimmich", "Bernardo Silva", "Vinicius Jr", "Salah", "Kane", "Osimhen"],
+            4: ["Van Dijk", "Courtois", "De Bruyne", "Benzema", "Modric", "Neymar", "Alisson"],
+            5: ["Haaland", "Mbappe", "Ronaldo", "Lewandowski"],
+            6: ["Messi", "Ronaldinho", "Zidane", "Cruyff", "Maradona", "Pele"]
+        };
+        
+        const starsMap = {1:"⭐",2:"⭐⭐",3:"⭐⭐⭐",4:"⭐⭐⭐⭐",5:"⭐⭐⭐⭐⭐",6:"⭐⭐⭐⭐⭐⭐"};
+        
+        function getRarity() {
+            let r = Math.floor(Math.random() * 100) + 1;
+            if (r <= 48) return 1;
+            if (r <= 79) return 2;
+            if (r <= 91) return 3;
+            if (r <= 96) return 4;
+            if (r <= 99) return 5;
+            return 6;
+        }
+        
+        function getData() {
+            return {
+                collection: JSON.parse(localStorage.getItem('collection') || '[]'),
+                lastOpen: parseInt(localStorage.getItem('lastOpen') || '0')
+            };
+        }
+        
+        function saveData(collection, lastOpen) {
+            localStorage.setItem('collection', JSON.stringify(collection));
+            if (lastOpen !== undefined) localStorage.setItem('lastOpen', lastOpen);
+        }
+        
+        function showResult(player, stars, target) {
+            let html = `<h2>🎴 ВЫПАЛО!</h2>
+                        <div class="player-name">${player}</div>
+                        <div class="stars">${starsMap[stars]}</div>`;
+            if (target === 'pack') {
+                document.getElementById('packResult').innerHTML = html;
+            } else {
+                document.getElementById('shopResult').innerHTML = html;
+            }
+        }
+        
+        function openFreePack() {
+            let data = getData();
+            let now = Date.now();
+            let hour = 3600000;
+            
+            if (data.lastOpen && (now - data.lastOpen) < hour) {
+                let left = hour - (now - data.lastOpen);
+                let min = Math.floor(left / 60000);
+                let sec = Math.floor((left % 60000) / 1000);
+                tg.showAlert(`⏳ Подожди ${min}:${sec.toString().padStart(2,'0')}`);
+                return;
+            }
+            
+            let stars = getRarity();
+            let player = players[stars][Math.floor(Math.random() * players[stars].length)];
+            
+            data.collection.push({ name: player, stars: stars });
+            saveData(data.collection, now);
+            
+            showResult(player, stars, 'pack');
+            tg.showAlert(`🎴 ${player} (${starsMap[stars]})`);
+            updateTimer();
+        }
+        
+        async function buyPack(guaranteedStars, price) {
+            try {
+                const invoice = {
+                    title: `Пак ${guaranteedStars}⭐`,
+                    description: `Гарантированный игрок ${guaranteedStars}⭐`,
+                    payload: JSON.stringify({ stars: guaranteedStars }),
+                    provider_token: '',
+                    currency: 'XTR',
+                    prices: [{ label: 'Пак', amount: price }]
+                };
+                tg.openInvoice(invoice);
+                
+                tg.onEvent('invoiceClosed', (data) => {
+                    if (data.status === 'paid') {
+                        let player = players[guaranteedStars][Math.floor(Math.random() * players[guaranteedStars].length)];
+                        let coll = getData().collection;
+                        coll.push({ name: player, stars: guaranteedStars });
+                        saveData(coll);
+                        showResult(player, guaranteedStars, 'shop');
+                        tg.showAlert(`🎴 Куплен пак ${guaranteedStars}⭐! ${player}`);
+                    } else {
+                        tg.showAlert('❌ Отмена');
+                    }
+                });
+            } catch(e) {
+                tg.showAlert('Ошибка');
+            }
+        }
+        
+        function showCollection() {
+            let coll = getData().collection;
+            if (coll.length === 0) {
+                document.getElementById('collectionList').innerHTML = '<p>📭 Нет карточек</p>';
+                return;
+            }
+            
+            let grouped = {1:[], 2:[], 3:[], 4:[], 5:[], 6:[]};
+            coll.forEach(card => {
+                grouped[card.stars].push(card.name);
+            });
+            
+            let html = '';
+            for (let i = 1; i <= 6; i++) {
+                if (grouped[i].length > 0) {
+                    html += `<div style="margin-top: 15px;"><b>${starsMap[i]}</b> — ${grouped[i].length} шт.</div>`;
+                    html += `<div style="margin-left: 15px; font-size: 14px; color: #aaa;">${grouped[i].join(', ')}</div>`;
+                }
+            }
+            html += `<div style="margin-top: 15px; font-weight: bold;">Всего: ${coll.length} карточек</div>`;
+            
+            document.getElementById('collectionList').innerHTML = html;
+        }
+        
+        function showSection(s) {
+            ['pack', 'collection', 'shop'].forEach(id => {
+                document.getElementById(id + 'Section').classList.add('hidden');
+            });
+            document.getElementById(s + 'Section').classList.remove('hidden');
+            if (s === 'collection') showCollection();
+            if (s === 'pack') updateTimer();
+            document.querySelectorAll('.menu-btn').forEach((btn, i) => {
+                btn.classList.toggle('active', (s === 'pack' && i === 0) || (s === 'collection' && i === 1) || (s === 'shop' && i === 2));
+            });
+        }
+        
+        function updateTimer() {
+            let last = getData().lastOpen;
+            let now = Date.now();
+            let timer = document.getElementById('timer');
+            if (last && (now - last) < 3600000) {
+                let left = 3600000 - (now - last);
+                let m = Math.floor(left / 60000);
+                let s = Math.floor((left % 60000) / 1000);
+                timer.textContent = `⏱️ Через ${m}:${s.toString().padStart(2,'0')}`;
+            } else {
+                timer.textContent = '✅ Пак доступен';
+            }
+        }
+        
+        updateTimer();
+        setInterval(updateTimer, 1000);
+        showSection('pack');
+    </script>
+</body>
+  </html>
