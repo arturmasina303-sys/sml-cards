@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SML Карточки</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0a0f2a, #0a1a3a);
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            color: white;
+        }
+        button {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 10px;
+            margin: 10px;
+        }
+        .card {
+            background: #1a2a4a;
+            border-radius: 20px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 300px;
+        }
+        .stars {
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🎴 SML КАРТОЧКИ</h1>
+        <div id="result">
+            <p>Нажми кнопку, чтобы открыть карту</p>
+        </div>
+        <button onclick="openPack()">📦 ОТКРЫТЬ ПАК</button>
+        <button onclick="showCollection()">📋 МОЯ КОЛЛЕКЦИЯ</button>
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.ready();
+        
+        const players = {
+            1: ["Вальес", "Линделоф", "Гарначо", "Салах", "Абде"],
+            2: ["Гонсалес", "Керкез", "Белингем", "Ольмо", "Адейеми", "Силва", "Хусанов", "Бальде", "Бакайоко", "Кейн"],
+            3: ["Касадо", "Ямаль", "Мбаппе", "Вирц", "Фримпонг", "Педри"],
+            4: ["Экитике", "Левандовски", "Рафинья"],
+            5: ["Шешко Флэшбэк"],
+            6: ["Мармуш Флэшбэк"]
+        };
+        
+        const starsMap = {1:"⭐",2:"⭐⭐",3:"⭐⭐⭐",4:"⭐⭐⭐⭐",5:"⭐⭐⭐⭐⭐",6:"⭐⭐⭐⭐⭐⭐"};
+        
+        function getRarity() {
+            let r = Math.floor(Math.random() * 100) + 1;
+            if (r <= 31) return 1;
+            if (r <= 55) return 2;
+            if (r <= 70) return 3;
+            if (r <= 84) return 4;
+            if (r <= 92) return 5;
+            return 6;
+        }
+        
+        function openPack() {
+            let rarity = getRarity();
+            let list = players[rarity];
+            let player = list[Math.floor(Math.random() * list.length)];
+            let stars = starsMap[rarity];
+            document.getElementById('result').innerHTML = 
+                <h2>🎴 ВЫПАЛО!</h2>
+                <p style="font-size:24px">${player}</p>
+                <p class="stars">${stars}</p>
+            ;
+        }
+        
+        function showCollection() {
+            tg.showAlert("Коллекция будет сохранена в Telegram");
+        }
+    </script>
+</body>
+</html>
