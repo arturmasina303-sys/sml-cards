@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SML Карточки</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #0a0f2a, #0a1a3a);
+            font-family: 'Segoe UI', Arial, sans-serif;
+            padding: 20px;
+            color: white;
+            min-height: 100vh;
+        }
+        .container { max-width: 400px; margin: 0 auto; }
+        .card {
+            background: #1a2a4a;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .menu-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .menu-btn {
+            flex: 1;
+            background: #2a3a5a;
+            border: none;
+            color: white;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .menu-btn.active { background: #e94560; }
+        .pack-btn {
+            background: linear-gradient(135deg, #e94560, #b52b43);
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            border: none;
+            color: white;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .shop-item, .team-slot {
+            background: #0f1422;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .shop-price {
+            background: #ffd966;
+            color: #1a2a4a;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        .shop-btn {
+            background: #e94560;
+            border: none;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        .result-area {
+            background: #0f1422;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            margin-top: 15px;
+        }
+        .player-name { font-size: 28px; font-weight: bold; margin: 10px 0; }
+        .stars { font-size: 32px; margin: 10px 0; }
+        .timer { font-size: 14px; color: #aaa; margin-top: 15px; text-align: center; }
+        .collection-list { max-height: 400px; overflow-y: auto; text-align: left; }
+        .team-summary {
+            background: #0f1422;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px 0;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .hidden { display: none; }
+        select {
+            background: #2a3a5a;
+            color: white;
+            padding: 8px;
+            border-radius: 10px;
+            border: none;
+            width: 100%;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="menu-buttons">
+            <button class="menu-btn" onclick="showSection('pack')">📦 Пак</button>
+            <button class="menu-btn" onclick="showSection('collection')">📋 Коллекция</button>
+            <button class="menu-btn" onclick="showSection('shop')">🛒 Магазин</button>
+            <button class="menu-btn" onclick="showSection('pvp')">⚔️ PvP</button>
+        </div>
+
+        <!-- ПАКИ -->
+        <div id="packSection" class="card">
+            <button class="pack-btn" onclick="openFreePack()">📦 ОТКРЫТЬ БЕСПЛАТНЫЙ ПАК</button>
+            <div class="timer" id="timer">✅ Пак доступен</div>
+            <div id="packResult" class="result-area"><p>Нажми кнопку</p></div>
+        </div>
+
+        <!-- КОЛЛЕКЦИЯ -->
+        <div id="collectionSection" class="card hidden">
+            <h3>🎴 Коллекция</h3>
+            <div id="collectionList" class="collection-list"><p>Загрузка...</p></div>
+        </div>
+
+        <!-- МАГАЗИН -->
+        <div id="shopSection" class="card hidden">
+            <h3>🛒 Магазин паков</h3>
+            <div class="shop-item">
+                <div><b>⭐ Пак 1⭐</b><br><small>Гарант 1⭐</small></div>
+                <div class="shop-price">5 ⭐</div>
+                <button class="shop-btn" onclick="buyPack(1, 5)">Купить</button>
+            </div>
+            <div class="shop-item">
+                <div><b>⭐⭐ Пак 2⭐</b><br><small>Гарант 2⭐</small></div>
+                <div class="shop-price">15 ⭐</div>
+                <button class="shop-btn" onclick="buyPack(2, 15)">Купить</button>
+            </div>
+            <div class="shop-item">
+                <div><b>⭐⭐⭐ Пак 3⭐</b><br><small>Гарант 3⭐</small></div>
+                <div class="shop-price">30 ⭐</div>
+                <button class="shop-btn" onclick="buyPack(3, 30)">Купить</button>
+            </div>
+            <div id="shopResult" class="result-area"><p>Выбери пак</p></div>
+        </div>
+
+        <!-- PVP СВОИМИ КАРТОЧКАМИ -->
+        <div id="pvpSection" class="card hidden">
+            <h3>⚔️ СОСТАВ НА МАТЧ</h3>
+            <div class="team-slot"><span>⚽ Нападающий</span><select id="forwardSelect" onchange="updateTeamPower()"><option value="">-- выбрать --</option></select></div>
+            <div class="team-slot"><span>🎯 Полузащитник</span><select id="midfielderSelect" onchange="updateTeamPower()"><option value="">-- выбрать --</option></select></div>
+            <div class="team-slot"><span>🛡️ Защитник</span><select id="defenderSelect" onchange="updateTeamPower()"><option value="">-- выбрать --</option></select></div>
+            <div class="team-slot"><span>🧤 Вратарь</span><select id="goalkeeperSelect" onchange="updateTeamPower()"><option value="">-- выбрать --</option></select></div>
+            <div class="team-summary" id="teamPower">💪 Суммарный рейтинг: 0</div>
+            <button class="pack-btn" onclick="startMatch()">⚔️ НАЧАТЬ МАТЧ</button>
+            <div id="matchResult" class="result-area"><p>Выбери состав и нажми "Начать матч"</p></div>
+        </div>
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.ready();
+        
+        // РЕЙТИНГИ ПО ЗВЁЗДАМ
+        const ratingByStars = {1:70, 2:78, 3:84, 4:88, 5:92, 6:96};
+        
+        // ИГРОКИ С ПОЗИЦИЯМИ
+        const playersData = {
+            1: [
+                { name: "Fati", position: "forward", stars: 1 },
+                { name: "Pedri", position: "midfielder", stars: 1 },
+                { name: "Gavi", position: "midfielder", stars: 1 },
+                { name: "Camavinga", position: "midfielder", stars: 1 },
+                { name: "Moukoko", position: "forward", stars: 1 },
+                { name: "Bellingham", position: "midfielder", stars: 1 }
+            ],
+            2: [
+                { name: "Odegaard", position: "midfielder", stars: 2 },
+                { name: "Saka", position: "forward", stars: 2 },
+                { name: "Foden", position: "midfielder", stars: 2 },
+                { name: "Musiala", position: "midfielder", stars: 2 },
+                { name: "Wirtz", position: "midfielder", stars: 2 },
+                { name: "Kvaratskhelia", position: "forward", stars: 2 }
+            ],
+            3: [
+                { name: "Rodri", position: "midfielder", stars: 3 },
+                { name: "Kimmich", position: "midfielder", stars: 3 },
+                { name: "Bernardo Silva", position: "midfielder", stars: 3 },
+                { name: "Vinicius Jr", position: "forward", stars: 3 },
+                { name: "Salah", position: "forward", stars: 3 },
+                { name: "Kane", position: "forward", stars: 3 }
+            ],
+            4: [
+                { name: "Van Dijk", position: "defender", stars: 4 },
+                { name: "Courtois", position: "goalkeeper", stars: 4 },
+                { name: "De Bruyne", position: "midfielder", stars: 4 },
+                { name: "Benzema", position: "forward", stars: 4 },
+                { name: "Modric", position: "midfielder", stars: 4 },
+                { name: "Neymar", position: "forward", stars: 4 }
+            ],
+            5: [
+                { name: "Haaland", position: "forward", stars: 5 },
+                { name: "Mbappe", position: "forward", stars: 5 },
+                { name: "Ronaldo", position: "forward", stars: 5 },
+                { name: "Lewandowski", position: "forward", stars: 5 }
+            ],
+            6: [
+                { name: "Messi", position: "forward", stars: 6 },
+                { name: "Ronaldinho", position: "midfielder", stars: 6 },
+                { name: "Zidane", position: "midfielder", stars: 6 },
+                { name: "Cruyff", position: "forward", stars: 6 },
+                { name: "Maradona", position: "midfielder", stars: 6 },
+                { name: "Pele", position: "forward", stars: 6 }
+            ]
+        };
+        
+        const starsMap = {1:"⭐",2:"⭐⭐",3:"⭐⭐⭐",4:"⭐⭐⭐⭐",5:"⭐⭐⭐⭐⭐",6:"⭐⭐⭐⭐⭐⭐"};
+        
+        function getPlayerRating(name) {
+            for (let s = 1; s <= 6; s++) {
+                let player = playersData[s].find(p => p.name === name);
+                if (player) return ratingByStars[player.stars];
+            }
+            return 0;
+        }
+        
+        function getPlayerInfo(name) {
+            for (let s = 1; s <= 6; s++) {
+                let player = playersData[s].find(p => p.name === name);
+                if (player) return player;
+            }
+            return null;
+        }
+        
+        function getRandomPlayerByStars(stars) {
+            let list = playersData[stars];
+            return list[Math.floor(Math.random() * list.length)];
+        }
+        
+        function getRandomOpponentTeam() {
+            let positions = ['forward', 'midfielder', 'defender', 'goalkeeper'];
+            let team = {};
+            for (let pos of positions) {
+                let stars = Math.floor(Math.random() * 6) + 1;
+                let available = playersData[stars].filter(p => p.position === pos);
+                if (available.length === 0) available = playersData[stars];
+                team[pos] = available[Math.floor(Math.random() * available.length)];
+            }
+            return team;
+        }
+        
+        function getData() {
+            return {
+                collection: JSON.parse(localStorage.getItem('collection') || '[]'),
+                lastOpen: parseInt(localStorage.getItem('lastOpen') || '0')
+            };
+        }
+        
+        function saveData(collection, lastOpen) {
+            localStorage.setItem('collection', JSON.stringify(collection));
+            if (lastOpen !== undefined) localStorage.setItem('lastOpen', lastOpen);
+        }
+        
+        function getRarity() {
+            let r = Math.floor(Math.random() * 100) + 1;
+            if (r <= 48) return 1;
+            if (r <= 79) return 2;
+            if (r <= 91) return 3;
+            if (r <= 96) return 4;
+            if (r <= 99) return 5;
+            return 6;
+        }
+        
+        function openFreePack() {
+            let data = getData();
+            let now = Date.now();
+            if (data.lastOpen && now - data.lastOpen < 3600000) {
+                let left = 3600000 - (now - data.lastOpen);
+                tg.showAlert(`⏳ Подожди ${Math.floor(left/60000)}:${Math.floor((left%60000)/1000).toString().padStart(2,'0')}`);
+                return;
+            }
+            let stars = getRarity();
+            let player = getRandomPlayerByStars(stars);
+            data.collection.push({ name: player.name, stars: player.stars, position: player.position });
+            saveData(data.collection, now);
+            let rating = ratingByStars[player.stars];
+            document.getElementById('packResult').innerHTML = `<h2>🎴 ВЫПАЛО!</h2><div class="player-name">${player.name}</div><div class="stars">${starsMap[player.stars]}</div><div>Рейтинг: ${rating}</div>`;
+            tg.showAlert(`🎴 ${player.name} (${starsMap[player.stars]}, рейтинг ${rating})`);
+            updateTimer();
+            updateTeamSelectors();
+        }
+        
+        async function buyPack(guaranteedStars, price) {
+            try {
+                tg.openInvoice({
+                    title: `Пак ${guaranteedStars}⭐`,
+                    description: `Гарантированный игрок ${guaranteedStars}⭐`,
+                    payload: JSON.stringify({ stars: guaranteedStars }),
+                    provider_token: '',
+                    currency: 'XTR',
+                    prices: [{ label: 'Пак', amount: price }]
+                });
+                tg.onEvent('invoiceClosed', (data) => {
+                    if (data.status === 'paid') {
+                        let player = getRandomPlayerByStars(guaranteedStars);
+                        let coll = getData().collection;
+                        coll.push({ name: player.name, stars: player.stars, position: player.position });
+                        saveData(coll);
+                        let rating = ratingByStars[player.stars];
+                        document.getElementById('shopResult').innerHTML = `<h2>🎴 ВЫПАЛО!</h2><div class="player-name">${player.name}</div><div class="stars">${starsMap[player.stars]}</div><div>Рейтинг: ${rating}</div>`;
+                        tg.showAlert(`🎴 Куплен пак ${guaranteedStars}⭐! ${player.name}`);
+                        updateTeamSelectors();
+                    } else tg.showAlert('❌ Отмена');
+                });
+            } catch(e) { tg.showAlert('Ошибка'); }
+        }
+        
+        function showCollection() {
+            let coll = getData().collection;
+            if (!coll.length) { document.getElementById('collectionList').innerHTML = '<p>📭 Нет карточек</p>'; return; }
+            let grouped = {1:[],2:[],3:[],4:[],5:[],6:[]};
+            coll.forEach(c => grouped[c.stars].push(c.name));
+            let html = '';
+            for (let i=1;i<=6;i++) {
+                if (grouped[i].length) {
+                    let rating = ratingByStars[i];
+                    html += `<div style="margin-top:15px"><b>${starsMap[i]} (рейтинг ${rating})</b> — ${grouped[i].length} шт.<div style="margin-left:15px;font-size:14px;color:#aaa">${grouped[i].join(', ')}</div></div>`;
+                }
+            }
+            html += `<div style="margin-top:15px;font-weight:bold">Всего: ${coll.length}</div>`;
+            document.getElementById('collectionList').innerHTML = html;
+        }
+        
+        function updateTeamSelectors() {
+            let coll = getData().collection;
+            let forwards = coll.filter(c => getPlayerInfo(c.name)?.position === 'forward');
+            let midfielders = coll.filter(c => getPlayerInfo(c.name)?.position === 'midfielder');
+            let defenders = coll.filter(c => getPlayerInfo(c.name)?.position === 'defender');
+            let goalkeepers = coll.filter(c => getPlayerInfo(c.name)?.position === 'goalkeeper');
+            
+            function updateSelect(selectId, list) {
+                let sel = document.getElementById(selectId);
+                let cur = sel.value;
+                sel.innerHTML = '<option value="">-- выбрать --</option>';
+                list.forEach(c => {
+                    let info = getPlayerInfo(c.name);
+                    let rating = ratingByStars[info.stars];
+                    let opt = document.createElement('option');
+                    opt.value = c.name;
+                    opt.textContent = `${c.name} (${starsMap[info.stars]}, рейтинг ${rating})`;
+                    sel.appendChild(opt);
+                });
+                if (cur && list.some(c => c.name === cur)) sel.value = cur;
+                else sel.value = '';
+            }
+            
+            updateSelect('forwardSelect', forwards);
+            updateSelect('midfielderSelect', midfielders);
+            updateSelect('defenderSelect', defenders);
+            updateSelect('goalkeeperSelect', goalkeepers);
+            updateTeamPower();
+        }
+        
+        function updateTeamPower() {
+            let forward = document.getElementById('forwardSelect').value;
+            let midfielder = document.getElementById('midfielderSelect').value;
+            let defender = document.getElementById('defenderSelect').value;
+            let goalkeeper = document.getElementById('goalkeeperSelect').value;
+            let total = getPlayerRating(forward) + getPlayerRating(midfielder) + getPlayerRating(defender) + getPlayerRating(goalkeeper);
+            document.getElementById('teamPower').innerHTML = `💪 Суммарный рейтинг: ${total}`;
+        }
+        
+        function startMatch() {
+            let forward = document.getElementById('forwardSelect').value;
+            let midfielder = document.getElementById('midfielderSelect').value;
+            let defender = document.getElementById('defenderSelect').value;
+            let goalkeeper = document.getElementById('goalkeeperSelect').value;
+            
+            if (!forward || !midfielder || !defender || !goalkeeper) {
+                tg.showAlert('Выбери всех игроков!');
+                return;
+            }
+            
+            let myRating = getPlayerRating(forward) + getPlayerRating(midfielder) + getPlayerRating(defender) + getPlayerRating(goalkeeper);
+            let opponentTeam = getRandomOpponentTeam();
+            let opponentRating = getPlayerRating(opponentTeam.forward.name) + getPlayerRating(opponentTeam.midfielder.name) + 
+                                 getPlayerRating(opponentTeam.defender.name) + getPlayerRating(opponentTeam.goalkeeper.name);
+            
+            let result = '';
+            if (myRating > opponentRating) result = '🏆 ПОБЕДА! Твоя команда сильнее!';
+            else if (myRating < opponentRating) result = '😔 ПОРАЖЕНИЕ. Соперник оказался сильнее.';
+            else result = '🤝 НИЧЬЯ!';
+            
+            let wins = parseInt(localStorage.getItem('pvp_wins') || '0');
+            let losses = parseInt(localStorage.getItem('pvp_losses') || '0');
+            if (result.includes('ПОБЕДА')) { wins++; localStorage.setItem('pvp_wins', wins); }
+            else if (result.includes('ПОРАЖЕНИЕ')) { losses++; localStorage.setItem('pvp_losses', losses); }
+            
+            document.getElementById('matchResult').innerHTML = `
+                <h3>⚔️ РЕЗУЛЬТАТ МАТЧА</h3>
+                <p><b>Твой рейтинг:</b> ${myRating}</p>
+                <p><b>Рейтинг соперника:</b> ${opponentRating}</p>
+                <p><b>Состав соперника:</b><br>
+                ⚽ ${opponentTeam.forward.name} (${starsMap[opponentTeam.forward.stars]}, рейтинг ${getPlayerRating(opponentTeam.forward.name)})<br>
+                🎯 ${opponentTeam.midfielder.name} (${starsMap[opponentTeam.midfielder.stars]}, рейтинг ${getPlayerRating(opponentTeam.midfielder.name)})<br>
+                🛡️ ${opponentTeam.defender.name} (${starsMap[opponentTeam.defender.stars]}, рейтинг ${getPlayerRating(opponentTeam.defender.name)})<br>
+                🧤 ${opponentTeam.goalkeeper.name} (${starsMap[opponentTeam.goalkeeper.stars]}, рейтинг ${getPlayerRating(opponentTeam.goalkeeper.name)})</p>
+                <h2>${result}</h2>
+                <p>🏆 Побед: ${wins} | 😔 Поражений: ${losses}</p>
+            `;
+        }
+        
+        function updateTimer() {
+            let last = getData().lastOpen;
+            let now = Date.now();
+            let timer = document.getElementById('timer');
+            if (last && now - last < 3600000) {
+                let left = 3600000 - (now - last);
+                timer.textContent = `⏱️ Через ${Math.floor(left/60000)}:${Math.floor((left%60000)/100
