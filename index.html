@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SML PvP Тест</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0f2a;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            color: white;
+        }
+        .card {
+            background: #1a2a4a;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        button {
+            background: #e94560;
+            border: none;
+            color: white;
+            padding: 15px;
+            font-size: 18px;
+            border-radius: 12px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        select {
+            background: #2a3a5a;
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            width: 100%;
+            margin-top: 5px;
+        }
+        .team-slot {
+            margin-bottom: 15px;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #0f1422;
+            border-radius: 15px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>⚔️ СОСТАВ НА МАТЧ</h2>
+        
+        <div class="team-slot">
+            <div>⚽ Нападающий</div>
+            <select id="forward">
+                <option value="">-- выбрать --</option>
+            </select>
+        </div>
+        
+        <div class="team-slot">
+            <div>🎯 Полузащитник</div>
+            <select id="midfielder">
+                <option value="">-- выбрать --</option>
+            </select>
+        </div>
+        
+        <div class="team-slot">
+            <div>🛡️ Защитник</div>
+            <select id="defender">
+                <option value="">-- выбрать --</option>
+            </select>
+        </div>
+        
+        <div class="team-slot">
+            <div>🧤 Вратарь</div>
+            <select id="goalkeeper">
+                <option value="">-- выбрать --</option>
+            </select>
+        </div>
+        
+        <div class="result" id="powerDisplay">
+            💪 Суммарный рейтинг: 0
+        </div>
+        
+        <button onclick="fight()">⚔️ НАЧАТЬ МАТЧ</button>
+        
+        <div class="result" id="fightResult">
+            Выбери состав и нажми кнопку
+        </div>
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.ready();
+        
+        // Тестовые игроки
+        const testPlayers = {
+            forward: [
+                { name: "Messi", rating: 96, stars: 6 },
+                { name: "Ronaldo", rating: 94, stars: 5 },
+                { name: "Haaland", rating: 92, stars: 5 },
+                { name: "Mbappe", rating: 92, stars: 5 }
+            ],
+            midfielder: [
+                { name: "De Bruyne", rating: 92, stars: 5 },
+                { name: "Modric", rating: 88, stars: 4 },
+                { name: "Rodri", rating: 84, stars: 3 },
+                { name: "Pedri", rating: 78, stars: 2 }
+            ],
+            defender: [
+                { name: "Van Dijk", rating: 88, stars: 4 },
+                { name: "Rudiger", rating: 84, stars: 3 },
+                { name: "Marquinhos", rating: 84, stars: 3 },
+                { name: "Araujo", rating: 78, stars: 2 }
+            ],
+            goalkeeper: [
+                { name: "Courtois", rating: 88, stars: 4 },
+                { name: "Alisson", rating: 88, stars: 4 },
+                { name: "Ter Stegen", rating: 84, stars: 3 },
+                { name: "Oblak", rating: 84, stars: 3 }
+            ]
+        };
+        
+        function fillSelect(selectId, players) {
+            let select = document.getElementById(selectId);
+            select.innerHTML = '<option value="">-- выбрать --</option>';
+            players.forEach(p => {
+                let option = document.createElement('option');
+                option.value = p.name;
+                option.textContent = `${p.name} (${p.rating})`;
+                select.appendChild(option);
+            });
+        }
+        
+        function updatePower() {
+            let forward = document.getElementById('forward').value;
+            let midfielder = document.getElementById('midfielder').value;
+            let defender = document.getElementById('defender').value;
+            let goalkeeper = document.getElementById('goalkeeper').value;
+            
+            let getRating = (name, position) => {
+                let players = testPlayers[position];
+                let player = players.find(p => p.name === name);
+                return player ? player.rating : 0;
+            };
+            
+            let total = getRating(forward, 'forward') + getRating(midfielder, 'midfielder') + 
+                        getRating(defender, 'defender') + getRating(goalkeeper, 'goalkeeper');
+            
+            document.getElementById('powerDisplay').innerHTML = `💪 Суммарный рейтинг: ${total}`;
+            return total;
+        }
+        
+        function getRandomOpponent() {
+            let opponent = {
+                forward: testPlayers.forward[Math.floor(Math.random() * testPlayers.forward.length)],
+                midfielder: testPlayers.midfielder[Math.floor(Math.random() * testPlayers.midfielder.length)],
+                defender: testPlayers.defender[Math.floor(Math.random() * testPlayers.defender.length)],
+                goalkeeper: testPlayers.goalkeeper[Math.floor(Math.random() * testPlayers.goalkeeper.length)]
+            };
+            
+            let total = opponent.forward.rating + opponent.midfielder.rating + 
+                        opponent.defender.rating + opponent.goalkeeper.rating;
+            
+            return { opponent, total };
+        }
+        
+        function fight() {
+            let forward = document.getElementById('forward').value;
+            let midfielder = document.getElementById('midfielder').value;
+            let defender = document.getElementById('defender').value;
+            let goalkeeper = document.getElementById('goalkeeper').value;
+            
+            if (!forward || !midfielder || !defender || !goalkeeper) {
+                tg.showAlert('Выбери всех игроков!');
+                return;
+            }
+            
+            let myRating = updatePower();
+            let opponentData = getRandomOpponent();
+            
+            let resultText = '';
+            if (myRating > opponentData.total) {
+                resultText = '🏆 ПОБЕДА! Твоя команда сильнее!';
+            } else if (myRating < opponentData.total) {
+                resultText = '😔 ПОРАЖЕНИЕ. Соперник оказался сильнее.';
+            } else {
+                resultText = '🤝 НИЧЬЯ!';
+            }
+            
+            document.getElementById('fightResult').innerHTML = `
+                <h3>⚔️ РЕЗУЛЬТАТ</h3>
+                <p><b>Твой рейтинг:</b> ${myRating}</p>
+                <p><b>Рейтинг соперника:</b> ${opponentData.total}</p>
+                <p><b>Состав соперника:</b><br>
+                ⚽ ${opponentData.opponent.forward.name} (${opponentData.opponent.forward.rating})<br>
+                🎯 ${opponentData.opponent.midfielder.name} (${opponentData.opponent.midfielder.rating})<br>
+                🛡️ ${opponentData.opponent.defender.name} (${opponentData.opponent.defender.rating})<br>
+                🧤 ${opponentData.opponent.goalkeeper.name} (${opponentData.opponent.goalkeeper.rating})</p>
+                <h2>${resultText}</h2>
+            `;
+            
+            tg.showAlert(resultText);
+        }
+        
+        // Заполняем выпадающие списки
+        fillSelect('forward', testPlayers.forward);
+        fillSelect('midfielder', testPlayers.midfielder);
+        fillSelect('defender', testPlayers.defender);
+        fillSelect('goalkeeper', testPlayers.goalkeeper);
+        
+        // Обновляем силу при выборе
+        document.getElementById('forward').onchange = updatePower;
+        document.getElementById('midfielder').onchange = updatePower;
+        document.getElementById('defender').onchange = updatePower;
+        document.getElementById('goalkeeper').onchange = updatePower;
+    </script>
+</body>
+</html>
