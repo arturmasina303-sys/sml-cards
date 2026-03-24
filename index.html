@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SML Карточки</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src='https://static.monetag.io/sdk.js' data-zone='10759776' data-sdk='show_10759776'></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{background:linear-gradient(135deg,#0a0f2a,#0a1a3a);font-family:'Segoe UI',Arial,sans-serif;padding:20px;color:#fff;min-height:100vh}
+        .container{max-width:400px;margin:0 auto}
+        .card{background:#1a2a4a;border-radius:20px;padding:20px;margin-bottom:20px}
+        .menu-buttons{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+        .menu-btn{flex:1;background:#2a3a5a;border:none;color:#fff;padding:12px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer}
+        .menu-btn.active{background:#e94560}
+        .pack-btn{
+            background-image: url('Picsart_26-03-25_02-08-11-134.png');
+            background-size: cover;
+            background-position: center;
+            width:100%;
+            padding:15px;
+            font-size:18px;
+            border:none;
+            color:#fff;
+            border-radius:12px;
+            cursor:pointer;
+            font-weight:700;
+            margin-bottom:15px;
+            text-shadow: 0 0 5px black;
+            position:relative;
+            z-index:1;
+        }
+        .ad-pack-btn{background-image: url('Picsart_26-03-25_02-08-11-134.png'); background-size: cover;}
+        .result-area{background:#0f1422;border-radius:15px;padding:20px;text-align:center;margin-top:15px;min-height:150px}
+        .card-img{width:200px;max-width:100%;border-radius:15px;margin:10px auto;display:block;animation: cardAppear 0.5s ease-out}
+        .timer{font-size:14px;color:#aaa;margin-top:15px;text-align:center}
+        .collection-grid{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-height:500px;overflow-y:auto;padding:10px}
+        .collection-card{width:100px;background:#0f1422;border-radius:12px;padding:8px;text-align:center;position:relative}
+        .collection-card img{width:80px;height:80px;border-radius:10px;object-fit:cover}
+        .collection-card .name{font-size:11px;margin-top:5px;color:#ffd966}
+        .sell-btn{background:#e94560;border:none;color:#fff;padding:4px 8px;border-radius:12px;font-size:10px;margin-top:5px;cursor:pointer;width:100%}
+        .ad-limit{font-size:12px;color:#aaa;text-align:center;margin-top:5px}
+        .balance{background:#0f1422;border-radius:15px;padding:12px;text-align:center;margin-bottom:15px;font-size:18px;font-weight:700}
+        .shop-item{background:#0f1422;border-radius:15px;padding:15px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+        .shop-price{background:#ffd966;color:#1a2a4a;padding:8px 15px;border-radius:20px;font-weight:700}
+        .shop-btn{background:#e94560;border:none;color:#fff;padding:8px 20px;border-radius:20px;cursor:pointer}
+        .hidden{display:none}
+        h3{margin-bottom:15px;text-align:center}
+        .team-card{background:#0f1422;border-radius:15px;padding:15px;margin-bottom:15px}
+        .team-name{font-size:20px;font-weight:bold;color:#ffd966;margin-bottom:10px}
+        .player-list{font-size:14px;margin:5px 0}
+        .choose-fighter-btn{background:#e94560;margin:5px;padding:8px 12px;border:none;border-radius:20px;color:#fff;cursor:pointer}
+        .fight-result{font-size:18px;font-weight:bold;margin:10px 0}
+        .reward{color:#ffd966}
+        input{width:100%;padding:10px;margin:10px 0;border-radius:10px;border:none}
+        .rating-row{display:flex;justify-content:space-between;background:#0f1422;padding:8px;border-radius:10px;margin-bottom:5px}
+        .rating-num{width:35px}
+        .rating-name{flex:2}
+        .rating-score{flex:1;text-align:right;color:#ffd966}
+        .rating-header{display:flex;justify-content:space-between;background:#e94560;padding:10px;border-radius:10px;margin-bottom:10px;font-weight:bold}
+        .cover{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#0a0f2a,#0a1a3a);z-index:1000;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:20px}
+        .cover-img{max-width:90%;max-height:70%;border-radius:20px;margin-bottom:30px;box-shadow:0 10px 30px rgba(0,0,0,0.5)}
+        .cover-btn{background:#e94560;border:none;color:#fff;padding:15px 40px;font-size:20px;font-weight:700;border-radius:30px;cursor:pointer}
+        
+        @keyframes flash {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        @keyframes scaleRating {
+            0% { transform: scale(0.2); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes cardAppear {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .flash-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+            animation: flash 0.3s ease-out;
+        }
+        .rating-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            color: #ffd966;
+            font-size: 48px;
+            font-weight: bold;
+            padding: 20px 40px;
+            border-radius: 20px;
+            z-index: 1000;
+            animation: scaleRating 4s ease-out forwards;
+            text-align: center;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+<div id="coverScreen" class="cover">
+    <img id="coverImage" class="cover-img" src="cover.jpg" alt="SML Карточки" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 400 400\'%3E%3Crect width=\'400\' height=\'400\' fill=\'%231a2a4a\'/%3E%3Ctext x=\'200\' y=\'200\' text-anchor=\'middle\' fill=\'%23ffd966\' font-size=\'40\'%3ESML%3C/text%3E%3Ctext x=\'200\' y=\'260\' text-anchor=\'middle\' fill=\'%23fff\' font-size=\'20\'%3EКарточки%3C/text%3E%3C/svg%3E'">
+    <button class="cover-btn" onclick="hideCover()">ПРОДОЛЖИТЬ</button>
+</div>
+
+<div id="mainApp" class="container" style="display:none">
+    <div class="menu-buttons">
+        <button class="menu-btn" onclick="showSection('pack')">📦 Пак</button>
+        <button class="menu-btn" onclick="showSection('collection')">📋 Коллекция</button>
+        <button class="menu-btn" onclick="showSection('shop')">🛒 Магазин</button>
+        <button class="menu-btn" onclick="showSection('match')">⚔️ Матчи</button>
+        <button class="menu-btn" onclick="showSection('tournament')">🏆 Турнир</button>
+        <button class="menu-btn" onclick="showSection('rating')">📊 Рейтинг</button>
+        <button class="menu-btn" onclick="showSection('winsRating')">🏅 Победы</button>
+    </div>
+
+    <div id="packSection" class="card">
+        <div class="balance">🪙 Монеты: <span id="coinBalance">0</span></div>
+        <button class="pack-btn" onclick="openFreePack()">📦 БЕСПЛАТНЫЙ ПАК (раз/2ч)</button>
+        <div class="timer" id="timer">✅ Пак доступен</div>
+        <button class="pack-btn ad-pack-btn" onclick="openAdPack()">🎥 РЕКЛАМНЫЙ ПАК (2/день)</button>
+        <div class="ad-limit" id="adLimitDisplay">🎥 Осталось: 2</div>
+        <button class="pack-btn" onclick="watchAdForCoins()">💰 РЕКЛАМА ЗА МОНЕТЫ (50) (2/день)</button>
+        <div class="ad-limit" id="coinAdLimitDisplay">💰 Осталось: 2</div>
+        <div id="packResult" class="result-area"><p>🎮 Нажми на кнопку</p></div>
+    </div>
+
+    <div id="collectionSection" class="card hidden">
+        <h3>🎴 Моя коллекция</h3>
+        <div id="collectionGrid" class="collection-grid"><p>📭 Загрузка...</p></div>
+    </div>
+
+    <div id="shopSection" class="card hidden">
+        <h3>🛒 МАГАЗИН</h3>
+        <div class="balance">🪙 Монеты: <span id="shopCoinBalance">0</span></div>
+        <div class="shop-item">
+            <div><b>📦 ОБЫЧНЫЙ ПАК</b><br><small>Случайный игрок</small></div>
+            <div class="shop-price">150 🪙</div>
+            <button class="shop-btn" onclick="buyPack()">Купить</button>
+        </div>
+        <div id="shopResult" class="result-area"><p>🛍️ Выбери товар</p></div>
+    </div>
+
+    <div id="matchSection" class="card hidden">
+        <h3>⚔️ БЫСТРЫЙ МАТЧ</h3>
+        <div id="matchArea" class="result-area">
+            <p>🎲 Найди соперника...</p>
+            <button class="pack-btn" style="margin-top:15px" onclick="startMatch()">НАЙТИ СОПЕРНИКА</button>
+        </div>
+    </div>
+
+    <div id="tournamentSection" class="card hidden">
+        <h3>🏆 ТУРНИР</h3>
+        <div id="tournamentArea" class="result-area">
+            <p>🎮 Начни свой путь к чемпионству!</p>
+            <button class="pack-btn" onclick="startTournament()">НАЧАТЬ ТУРНИР</button>
+        </div>
+    </div>
+
+    <div id="ratingSection" class="card hidden">
+        <h3>🏆 РЕЙТИНГ КОЛЛЕКЦИЙ (ТОП-20)</h3>
+        <div id="ratingArea" class="result-area"><p>📊 Загрузка...</p></div>
+    </div>
+
+    <div id="winsRatingSection" class="card hidden">
+        <h3>🏅 РЕЙТИНГ ПОБЕД (ТОП-20)</h3>
+        <div id="winsRatingArea" class="result-area"><p>📊 Загрузка...</p></div>
+    </div>
+</div>
+
+<script>
+let tg = window.Telegram.WebApp;
+tg.ready();
+
+function hideCover() {
+    document.getElementById('coverScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    tg.expand();
+}
+
+function showFlash(color = 'white') {
+    let flash = document.createElement('div');
+    flash.className = 'flash-overlay';
+    flash.style.backgroundColor = color;
+    document.body.appendChild(flash);
+    setTimeout(() => flash.remove(), 300);
+}
+
+function showRatingPopup(rating) {
+    return new Promise((resolve) => {
+        let popup = document.createElement('div');
+        popup.className = 'rating-popup';
+        popup.innerHTML = `⭐ ${rating} ⭐`;
+        document.body.appendChild(popup);
+        setTimeout(() => {
+            popup.remove();
+            resolve();
+        }, 4000);
+    });
+}
+
+const allCards = [
+{name:"Mbappe",img:"IMG_20260323_195529_238.jpg",stars:3,rating:88},
+{name:"Pau Cubarsi",img:"IMG_20260323_195527_165.jpg",stars:3,rating:88},
+{name:"Alisson",img:"IMG_20260324_104243_692.jpg",stars:3,rating:88},
+{name:"Kane",img:"IMG_20260324_104239_640.jpg",stars:3,rating:88},
+{name:"Frimpong",img:"IMG_20260323_195518_778.jpg",stars:3,rating:87},
+{name:"Musiala",img:"IMG_20260323_195515_925.jpg",stars:3,rating:87},
+{name:"Haaland",img:"IMG_20260323_195515_950.jpg",stars:3,rating:86},
+{name:"Dani Olmo",img:"IMG_20260323_195516_426.jpg",stars:3,rating:86},
+{name:"Casado",img:"IMG_20260323_195529_812.jpg",stars:3,rating:86},
+{name:"Courtois",img:"IMG_20260323_195526_288.jpg",stars:3,rating:86},
+{name:"Endrick",img:"IMG_20260323_231212_155.jpg",stars:3,rating:86},
+{name:"Dembele",img:"IMG_20260323_231208_432.jpg",stars:3,rating:86},
+{name:"Vinicius Jr",img:"IMG_20260323_195526_332.jpg",stars:3,rating:85},
+{name:"Eder Militao",img:"IMG_20260323_195524_896.jpg",stars:3,rating:85},
+{name:"Adeyemi",img:"IMG_20260323_195530_071.jpg",stars:3,rating:85},
+{name:"De Bruyne",img:"IMG_20260323_231212_282.jpg",stars:3,rating:85},
+{name:"Gyokeres",img:"IMG_20260323_195516_434.jpg",stars:3,rating:84},
+{name:"Savinho",img:"IMG_20260323_195516_194.jpg",stars:3,rating:84},
+{name:"Schlotterbeck",img:"IMG_20260323_231220_991.jpg",stars:3,rating:84},
+{name:"Bellingham",img:"IMG_20260323_195526_538.jpg",stars:3,rating:83},
+{name:"Camavinga",img:"IMG_20260323_231219_622.jpg",stars:3,rating:83},
+{name:"Hakimi",img:"IMG_20260323_231219_981.jpg",stars:3,rating:83},
+{name:"Casemiro",img:"IMG_20260323_231210_112.jpg",stars:3,rating:83},
+{name:"Woltemade",img:"IMG_20260323_231208_619.jpg",stars:3,rating:83},
+{name:"Rafael Leao",img:"IMG_20260323_231208_327.jpg",stars:3,rating:83},
+{name:"Mac Allister",img:"IMG_20260323_231201_691.jpg",stars:3,rating:83},
+{name:"Bakayoko",img:"IMG_20260324_104258_181.jpg",stars:3,rating:83},
+{name:"Francisco Conceicao",img:"IMG_20260323_231157_075.jpg",stars:3,rating:82},
+{name:"Martinez",img:"IMG_20260323_231202_174.jpg",stars:3,rating:82},
+{name:"Dimarco",img:"IMG_20260323_231201_158.jpg",stars:3,rating:82},
+{name:"David Neres",img:"IMG_20260323_231159_113.jpg",stars:3,rating:82},
+{name:"Torrents",img:"IMG_20260323_195521_545.jpg",stars:3,rating:82},
+{name:"De Vrij",img:"IMG_20260323_231200_315.jpg",stars:3,rating:81},
+{name:"Natan",img:"IMG_20260323_231210_600.jpg",stars:3,rating:81},
+{name:"McTominay",img:"IMG_20260324_100110_836.jpg",stars:3,rating:80},
+{name:"Estupinan",img:"IMG_20260323_231157_441.jpg",stars:3,rating:80},
+{name:"Lang",img:"IMG_20260323_231159_207.jpg",stars:3,rating:80},
+{name:"Maddison",img:"IMG_20260323_231207_643.jpg",stars:3,rating:80},
+{name:"David Raya",img:"IMG_20260323_231219_555.jpg",stars:3,rating:80},
+{name:"Nusa",img:"IMG_20260323_195529_645.jpg",stars:3,rating:80},
+{name:"Mikel Merino",img:"IMG_20260323_231219_915.jpg",stars:2,rating:79},
+{name:"Marmoush",img:"IMG_20260323_231208_145.jpg",stars:2,rating:79},
+{name:"Doue",img:"IMG_20260323_231208_479.jpg",stars:2,rating:79},
+{name:"Nuno Mendes",img:"IMG_20260324_100110_446.jpg",stars:2,rating:79},
+{name:"Kalulu",img:"IMG_20260323_195535_625.jpg",stars:2,rating:78},
+{name:"Ezzalzouli",img:"IMG_20260323_231210_374.jpg",stars:2,rating:78},
+{name:"Mbeumo",img:"IMG_20260323_231208_214.jpg",stars:2,rating:78},
+{name:"Eze",img:"IMG_20260323_231208_490.jpg",stars:2,rating:78},
+{name:"Doku",img:"IMG_20260323_195516_461.jpg",stars:2,rating:77},
+{name:"Lukeba",img:"IMG_20260323_231219_031.jpg",stars:2,rating:77}
+];
+  const allCardsPart2 = [
+{name:"Klostermann",img:"IMG_20260323_231219_672.jpg",stars:2,rating:77},
+{name:"Sancho",img:"IMG_20260323_231208_157.jpg",stars:2,rating:77},
+{name:"Matheus Cunha",img:"IMG_20260323_231208_420.jpg",stars:2,rating:77},
+{name:"Schick",img:"IMG_20260324_100110_551.jpg",stars:2,rating:77},
+{name:"Greenwood",img:"IMG_20260324_100110_478.jpg",stars:2,rating:77},
+{name:"Grimaldo",img:"IMG_20260324_100111_337.jpg",stars:2,rating:76},
+{name:"Hojlund",img:"IMG_20260323_195534_994.jpg",stars:2,rating:76},
+{name:"Tchouameni",img:"IMG_20260323_195526_698.jpg",stars:2,rating:76},
+{name:"Richarlison",img:"IMG_20260323_231210_407.jpg",stars:2,rating:76},
+{name:"Yan Couto",img:"IMG_20260324_095739_877.jpg",stars:2,rating:76},
+{name:"Lobotka",img:"IMG_20260323_195534_813.jpg",stars:2,rating:75},
+{name:"Dro",img:"IMG_20260323_195521_595.jpg",stars:2,rating:75},
+{name:"Gravenberch",img:"IMG_20260323_195518_858.jpg",stars:2,rating:75},
+{name:"Frattesi",img:"IMG_20260323_231219_307.jpg",stars:2,rating:75},
+{name:"Elmas",img:"IMG_20260323_231219_524.jpg",stars:2,rating:74},
+{name:"Nkunku",img:"IMG_20260323_231212_893.jpg",stars:2,rating:74},
+{name:"Rashford",img:"IMG_20260323_195535_510.jpg",stars:2,rating:74},
+{name:"David",img:"IMG_20260324_100111_345.jpg",stars:2,rating:73},
+{name:"Rabiot",img:"IMG_20260324_100110_864.jpg",stars:2,rating:72},
+{name:"Hradecky",img:"IMG_20260324_100111_244.jpg",stars:2,rating:71},
+{name:"Asensio",img:"IMG_20260323_195526_899.jpg",stars:2,rating:71},
+{name:"Mastantuono",img:"IMG_20260323_195523_002.jpg",stars:2,rating:71},
+{name:"Elanga",img:"IMG_20260323_231219_589.jpg",stars:2,rating:71},
+{name:"Kostic",img:"IMG_20260323_231212_075.jpg",stars:2,rating:71},
+{name:"Palacios",img:"IMG_20260324_100111_085.jpg",stars:2,rating:70},
+{name:"Chiesa",img:"IMG_20260323_195518_574.jpg",stars:2,rating:70},
+{name:"Diallo",img:"IMG_20260323_195535_536.jpg",stars:2,rating:70},
+{name:"Pavlidis",img:"IMG_20260323_231214_628.jpg",stars:2,rating:70},
+{name:"Alejandro Garnacho",img:"IMG_20260323_231211_962.jpg",stars:2,rating:70},
+{name:"Bellingham_70",img:"IMG_20260323_231205_480.jpg",stars:2,rating:70},
+{name:"Fabio Silva",img:"IMG_20260324_095729_482.jpg",stars:1,rating:69},
+{name:"Kolo Muani",img:"IMG_20260324_100110_860.jpg",stars:1,rating:68},
+{name:"Lindelof",img:"IMG_20260323_195747.jpg",stars:1,rating:68},
+{name:"Gimenez",img:"IMG_20260324_102640_702.jpg",stars:1,rating:68},
+{name:"Kubo",img:"IMG_20260324_102638_506.jpg",stars:1,rating:67},
+{name:"Bonny",img:"IMG_20260323_195529_412.jpg",stars:1,rating:66},
+{name:"Lemar",img:"IMG_20260324_102639_056.jpg",stars:1,rating:66},
+{name:"Petrovic",img:"IMG_20260323_195534_925.jpg",stars:1,rating:65},
+{name:"Kraft",img:"IMG_20260324_102638_763.jpg",stars:1,rating:65},
+{name:"Evans",img:"IMG_20260324_102638_823.jpg",stars:1,rating:65},
+{name:"Giroud",img:"IMG_20260324_102641_003.jpg",stars:1,rating:65},
+{name:"Mamabalde",img:"IMG_20260323_195529_399.jpg",stars:1,rating:64},
+{name:"Provedel",img:"IMG_20260324_102639_077.jpg",stars:1,rating:64},
+{name:"Miley",img:"IMG_20260323_195534_964.jpg",stars:1,rating:63},
+{name:"Freuler",img:"IMG_20260324_102638_160.jpg",stars:1,rating:63},
+{name:"Fofana",img:"IMG_20260323_195535_044.jpg",stars:1,rating:62},
+{name:"Mauro Junior",img:"IMG_20260324_102639_062.jpg",stars:1,rating:62},
+{name:"Basic",img:"IMG_20260323_195529_366.jpg",stars:1,rating:61},
+{name:"Nuno Tavares",img:"IMG_20260324_102638_376.jpg",stars:1,rating:61},
+{name:"Lykogiannis",img:"IMG_20260323_195535_272.jpg",stars:1,rating:60},
+{name:"Ravaglia",img:"IMG_20260324_102636_825.jpg",stars:1,rating:60},
+{name:"Lucumi",img:"IMG_20260324_102638_184.jpg",stars:1,rating:60}
+];
+for(let i=0; i<allCardsPart2.length; i++) allCards.push(allCardsPart2[i]);
+
+function getRandomCard() {
+    let r = Math.random() * 100;
+    let star = 1;
+    if(r < 10) star = 3;
+    else if(r < 45) star = 2;
+    let filtered = allCards.filter(c => c.stars === star);
+    return filtered[Math.floor(Math.random() * filtered.length)];
+}
+
+function getData() {
+    return {
+        collection: JSON.parse(localStorage.getItem('collection') || '[]'),
+        lastOpen: parseInt(localStorage.getItem('lastOpen') || '0'),
+        adPacksToday: parseInt(localStorage.getItem('adPacksToday') || '0'),
+        lastAdDate: localStorage.getItem('lastAdDate') || '',
+        coins: parseInt(localStorage.getItem('coins') || '0'),
+        coinAdsToday: parseInt(localStorage.getItem('coinAdsToday') || '0'),
+        lastCoinAdDate: localStorage.getItem('lastCoinAdDate') || '',
+        wins: parseInt(localStorage.getItem('wins') || '0')
+    };
+}
+
+function saveData(c, lo, ap, la, co, cat, lca, wins) {
+    localStorage.setItem('collection', JSON.stringify(c));
+    if(lo !== undefined) localStorage.setItem('lastOpen', lo);
+    if(ap !== undefined) localStorage.setItem('adPacksToday', ap);
+    if(la !== undefined) localStorage.setItem('lastAdDate', la);
+    if(co !== undefined) localStorage.setItem('coins', co);
+    if(cat !== undefined) localStorage.setItem('coinAdsToday', cat);
+    if(lca !== undefined) localStorage.setItem('lastCoinAdDate', lca);
+    if(wins !== undefined) localStorage.setItem('wins', wins);
+    updateBalance();
+    updateRating();
+    updateWinsRating();
+}
+
+function updateRating() {
+    let d = getData();
+    let totalRating = 0;
+    for(let i = 0; i < d.collection.length; i++) {
+        totalRating += d.collection[i].rating;
+    }
+    
+    let ratings = JSON.parse(localStorage.getItem('ratings') || '[]');
+    let userId = tg.initDataUnsafe.user?.id || 'guest_' + Date.now();
+    let userName = tg.initDataUnsafe.user?.first_name || 'Гость';
+    
+    let userIndex = -1;
+    for(let i = 0; i < ratings.length; i++) {
+        if(ratings[i].userId === userId) {
+            userIndex = i;
+            break;
+        }
+    }
+    
+    let userData = {
+        userId: userId,
+        name: userName,
+        totalRating: totalRating,
+        lastUpdate: Date.now()
+    };
+    
+    if(userIndex !== -1) {
+        ratings[userIndex] = userData;
+    } else {
+        ratings.push(userData);
+    }
+    
+    ratings.sort((a,b) => b.totalRating - a.totalRating);
+    ratings = ratings.slice(0, 50);
+    localStorage.setItem('ratings', JSON.stringify(ratings));
+    
+    let ratingSection = document.getElementById('ratingSection');
+    if(ratingSection && !ratingSection.classList.contains('hidden')) {
+        showRating();
+    }
+}
+
+function showRating() {
+    let ratings = JSON.parse(localStorage.getItem('ratings') || '[]');
+    ratings.sort((a,b) => b.totalRating - a.totalRating);
+    
+    if(ratings.length === 0) {
+        document.getElementById('ratingArea').innerHTML = '<p>📊 Пока нет участников. Открывай паки!</p>';
+        return;
+    }
+    
+    let html = '<div class="rating-header"><div class="rating-num">#</div><div class="rating-name">ИГРОК</div><div class="rating-score">РЕЙТИНГ</div></div>';
+    
+    for(let i = 0; i < Math.min(ratings.length, 20); i++) {
+        let r = ratings[i];
+        let medal = '';
+        if(i === 0) medal = '🥇';
+        else if(i === 1) medal = '🥈';
+        else if(i === 2) medal = '🥉';
+        else medal = `${i+1}.`;
+        
+        html += `
+            <div class="rating-row">
+                <div class="rating-num">${medal}</div>
+                <div class="rating-name">${r.name}</div>
+                <div class="rating-score">⭐ ${r.totalRating}</div>
+            </div>
+        `;
+    }
+    
+    html += '<button class="pack-btn" style="margin-top:15px;" onclick="updateRating(); showRating();">🔄 ОБНОВИТЬ</button>';
+    document.getElementById('ratingArea').innerHTML = html;
+}
+
+function updateWinsRating() {
+    let d = getData();
+    let wins = d.wins || 0;
+    
+    let winsRatings = JSON.parse(localStorage.getItem('winsRatings') || '[]');
+    let userId = tg.initDataUnsafe.user?.id || 'guest_' + Date.now();
+    let userName = tg.initDataUnsafe.user?.first_name || 'Гость';
+    
+    let userIndex = -1;
+    for(let i = 0; i < winsRatings.length; i++) {
+        if(winsRatings[i].userId === userId) {
+            userIndex = i;
+            break;
+        }
+    }
+    
+    let userData = {
+        userId: userId,
+        name: userName,
+        wins: wins,
+        lastUpdate: Date.now()
+    };
+    
+    if(userIndex !== -1) {
+        winsRatings[userIndex] = userData;
+    } else {
+        winsRatings.push(userData);
+    }
+    
+    winsRatings.sort((a,b) => b.wins - a.wins);
+    winsRatings = winsRatings.slice(0, 50);
+    localStorage.setItem('winsRatings', JSON.stringify(winsRatings));
+    
+    let winsSection = document.getElementById('winsRatingSection');
+    if(winsSection && !winsSection.classList.contains('hidden')) {
+        showWinsRating();
+    }
+}
+
+function showWinsRating() {
+    let winsRatings = JSON.parse(localStorage.getItem('winsRatings') || '[]');
+    winsRatings.sort((a,b) => b.wins - a.wins);
+    
+    if(winsRatings.length === 0) {
+        document.getElementById('winsRatingArea').innerHTML = '<p>🏅 Пока нет побед. Сыграй матч!</p>';
+        return;
+    }
+    
+    let html = '<div class="rating-header"><div class="rating-num">#</div><div class="rating-name">ИГРОК</div><div class="rating-score">ПОБЕДЫ</div></div>';
+    
+    for(let i = 0; i < Math.min(winsRatings.length, 20); i++) {
+        let r = winsRatings[i];
+        let medal = '';
+        if(i === 0) medal = '🥇';
+        else if(i === 1) medal = '🥈';
+        else if(i === 2) medal = '🥉';
+        else medal = `${i+1}.`;
+        
+        html += `
+            <div class="rating-row">
+                <div class="rating-num">${medal}</div>
+                <div class="rating-name">${r.name}</div>
+                <div class="rating-score">🏆 ${r.wins}</div>
+            </div>
+        `;
+    }
+    
+    html += '<button class="pack-btn" style="margin-top:15px;" onclick="updateWinsRating(); showWinsRating();">🔄 ОБНОВИТЬ</button>';
+    document.getElementById('winsRatingArea').innerHTML = html;
+}
+
+function resetDay() {
+    let d = getData();
+    let today = new Date().toDateString();
+    if(d.lastAdDate !== today) {
+        d.adPacksToday = 0;
+        d.lastAdDate = today;
+        saveData(d.collection, d.lastOpen, 0, today, d.coins, d.coinAdsToday, d.lastCoinAdDate, d.wins);
+    }
+    if(d.lastCoinAdDate !== today) {
+        d.coinAdsToday = 0;
+        d.lastCoinAdDate = today;
+        saveData(d.collection, d.lastOpen, d.adPacksToday, d.lastAdDate, d.coins, 0, today, d.wins);
+    }
+    updateLimits();
+}
+
+function updateLimits() {
+    let d = getData();
+    let adRem = 2 - (d.adPacksToday || 0);
+    let coinRem = 2 - (d.coinAdsToday || 0);
+    let adEl = document.getElementById('adLimitDisplay');
+    let coinEl = document.getElementById('coinAdLimitDisplay');
+    if(adEl) adEl.innerHTML = `🎥 Осталось: ${adRem}`;
+    if(coinEl) coinEl.innerHTML = `💰 Осталось: ${coinRem}`;
+}
+
+function updateBalance() {
+    let d = getData();
+    let b1 = document.getElementById('coinBalance');
+    let b2 = document.getElementById('shopCoinBalance');
+    if(b1) b1.innerText = d.coins;
+    if(b2) b2.innerText = d.coins;
+}
+
+function showCard(title, card) {
+    let img = card.img ? `<img class="card-img" src="${card.img}" onerror="this.style.display='none'">` : '';
+    document.getElementById('packResult').innerHTML = `
+        <h2>${title}</h2>
+        ${img}
+        <div style="font-size:24px">✨ ${card.name} ✨</div>
+        <div>${'⭐'.repeat(card.stars)} (${card.rating})</div>
+    `;
+}
+
+async function openFreePack() {
+    let d = getData();
+    let now = Date.now();
+    let twoHours = 7200000;
+    if(d.lastOpen && now - d.lastOpen < twoHours) {
+        let left = twoHours - (now - d.lastOpen);
+        let hours = Math.floor(left / 3600000);
+        let minutes = Math.floor((left % 3600000) / 60000);
+        tg.showAlert(`⏳ Жди ${hours}ч ${minutes}мин`);
+        return;
+    }
+    
+    let card = getRandomCard();
+    
+    if(card.rating >= 80 && card.rating <= 88) {
+        showFlash('#ffcc00');
+        await showRatingPopup(card.rating);
+        d.collection.push(card);
+        saveData(d.collection, now, d.adPacksToday, d.lastAdDate, d.coins, d.coinAdsToday, d.lastCoinAdDate, d.wins);
+        showCard('🎴 ВЫПАЛО!', card);
+        tg.showAlert(`🎴 ${card.name} (${'⭐'.repeat(card.stars)})`);
+    } else {
+        showFlash('white');
+        d.collection.push(card);
+        saveData(d.collection, now, d.adPacksToday, d.lastAdDate, d.coins, d.coinAdsToday, d.lastCoinAdDate, d.wins);
+        showCard('🎴 ВЫПАЛО!', card);
+        tg.showAlert(`🎴 ${card.name} (${'⭐'.repeat(card.stars)})`);
+    }
+    
+    updateTimer();
+}
+
+async function openAdPack() {
+    resetDay();
+    let d = getData();
+    if(d.adPacksToday >= 2) {
+        tg.showAlert('❌ Лимит на сегодня (2 пака) исчерпан! Завтра будут новые.');
+        return;
+    }
+    
+    let card = getRandomCard();
+    
+    if(card.rating >= 80 && card.rating <= 88) {
+        showFlash('#ffcc00');
+        await showRatingPopup(card.rating);
+        d.collection.push(card);
+        d.adPacksToday++;
+        saveData(d.collection, d.lastOpen, d.adPacksToday, d.lastAdDate, d.coins, d.coinAdsToday, d.lastCoinAdDate, d.wins);
+        updateLimits();
+        showCard('🎥 РЕКЛАМНЫЙ ПАК!', card);
+        tg.showAlert(`🎴 ${card.name} (${'⭐'.repeat(card.stars)})`);
+    } else {
+        showFlash('white');
+        d.collection.push(card);
+        d.adPacksToday++;
+        saveData(d.collection, d.lastOpen, d.adPacksToday, d.lastAdDate, d.coins, d.coinAdsToday, d.lastCoinAdDate, d.wins);
+        updateLimits();
+        showCard('🎥 РЕКЛАМНЫЙ ПАК!', card);
+        tg.showAlert(`🎴 ${card.name} (${'⭐'.repeat(card.stars)})`);
+    }
+    
+    if(typeof monetag !== 'undefined' && monetag) {
+        monetag('showRewardedAd', '10759776', function(success) {
+            if(success) console.log('Реклама показана');
+        });
+    }
+}
+
+async function watchAdForCoins() {
+    resetDay();
+    let d = getData();
+    if(d.coinAdsToday >= 2) {
+        tg.showAlert('❌ Лимит на сегодня (2 раза) исчерпан! Завтра будут новые.');
+        return;
+    }
+    
+    let newCoins = d.coins + 50;
+    d.coinAdsToday++;
+    saveData(d.collection, d.lastOpen, d.adPacksToday, d.lastAdDate, newCoins, d.coinAdsToday, d.lastCoinAdDate, d.wins);
+    updateLimits();
+    updateBalance();
+    document.getElementById('packResult').innerHTML = `<h2>💰 +50 МОНЕТ!</h2><p>Баланс: ${newCoins}</p>`;
+    tg.showAlert(`💰 +50 монет! Баланс: ${newCoins}`);
+    
+    if(typeof monetag !== 'undefined' && monetag) {
+        monetag('showRewardedAd', '10759776', function(success) {
+            if(success) console.log('Реклама показана');
+        });
+    }
+}
+
+function buyPack() {
+    let d = getData();
+    let price = 150;
+    if(d.coins < price) {
+        tg.showAlert(`❌ Нужно ${price} монет!`);
+        return;
+    }
+    let newCoins = d.coins - price;
+    let card = getRandomCard();
+    d.collection.push(card);
+    saveData(d.collection, d.lastOpen, d.adPacksToday, d.lastAdDate, newCoins, d.coinAdsToday, d.lastCoinAdDate, d.wins);
+    updateBalance();
+    
+    let imgHtml = card.img ? `<img class="card-img" src="${card.img}" onerror="this.style.display='none'">` : '';
+    document.getElementById('shopResult').innerHTML = `
+        <h2>📦 КУПЛЕНО!</h2>
+        ${imgHtml}
+        <div style="font-size:24px">✨ ${card.name} ✨</div>
+        <div>${'⭐'.repeat(card.stars)} (${card.rating})</div>
+        <div>💰 Осталось монет: ${newCoins}</div>
+    `;
+    tg.showAlert(`📦 Ты купил пак! Выпал ${card.name} (${'⭐'.repeat(card.stars)})`);
+}
+
+function sellCard(cardName, cardStars, cardRating) {
+    let d = getData();
+    let index = -1;
+    for(let i = 0; i < d.collection.length; i++) {
+        if(d.collection[i].name === cardName && d.collection[i].stars === cardStars && d.collection[i].rating === cardRating) {
+            index = i;
+            break;
+        }
+    }
+    if(index === -1) {
+        tg.showAlert('Ошибка! Карточка не найдена.');
+        return;
+    }
+    
+    let price = 0;
+    if(cardStars === 1) price = 3;
+    else if(cardStars === 2) price = 20;
+    else if(cardStars === 3) price = 50;
+    else if(cardStars === 4) price = 300;
+    else if(cardStars === 5) price = 1000;
+    else if(cardStars === 6) price = 1600;
+    else {
+        tg.showAlert('Эту карточку нельзя продать');
+        return;
+    }
+    
+    d.collection.splice(index, 1);
+    d.coins += price;
+    saveData(d.collection, d.lastOpen, d.adPacksToday, d.lastAdDate, d.coins, d.coinAdsToday, d.lastCoinAdDate, d.wins);
+    updateBalance();
+    tg.showAlert(`💰 Продано! +${price} монет`);
+    showCollection();
+}
+
+function showCollection() {
+    let d = getData();
+    let coll = d.collection;
+    if(coll.length === 0) {
+        document.getElementById('collectionGrid').innerHTML = '<p>📭 Нет карточек</p>';
+        return;
+    }
+    let unique = {};
+    coll.forEach(c => {
+        let key = c.name + '_' + c.stars + '_' + c.rating;
+        if(!unique[key]) unique[key] = {...c, count:1};
+        else unique[key].count++;
+    });
+    let html = '';
+    Object.values(unique).forEach(c => {
+        let img = c.img ? `<img src="${c.img}" onerror="this.style.display='none'">` : '<div style="width:80px;height:80px;background:#2a3a5a;border-radius:10px;display:flex;align-items:center;justify-content:center">🎴</div>';
+        let price = 0;
+        if(c.stars === 1) price = 3;
+        else if(c.stars === 2) price = 20;
+        else if(c.stars === 3) price = 50;
+        else if(c.stars === 4) price = 300;
+        else if(c.stars === 5) price = 1000;
+        else if(c.stars === 6) price = 1600;
+        html += `
+            <div class="collection-card">
+                ${img}
+                <div class="name">${c.name}</div>
+                <div>${'⭐'.repeat(c.stars)} (${c.rating})</div>
+                <div style="color:#ffd966;">✖️${c.count}</div>
+                <button class="sell-btn" onclick="sellCard('${c.name}', ${c.stars}, ${c.rating})">💰 ${price}</button>
+            </div>
+        `;
+    });
+    document.getElementById('collectionGrid').innerHTML = html;
+}
+
+function updateTimer() {
+    let d = getData();
+    let now = Date.now();
+    let twoHours = 7200000;
+    let timer = document.getElementById('timer');
+    if(d.lastOpen && now - d.lastOpen < twoHours) {
+        let left = twoHours - (now - d.lastOpen);
+        let hours = Math.floor(left / 3600000);
+        let minutes = Math.floor((left % 3600000) / 60000);
+        timer.textContent = `⏱️ Через ${hours}ч ${minutes}мин`;
+    } else {
+        timer.textContent = '✅ Пак доступен';
+    }
+}
+
+function showSection(s) {
+    document.getElementById('packSection').classList.add('hidden');
+    document.getElementById('collectionSection').classList.add('hidden');
+    document.getElementById('shopSection').classList.add('hidden');
+    document.getElementById('matchSection').classList.add('hidden');
+    document.getElementById('tournamentSection').classList.add('hidden');
+    document.getElementById('ratingSection').classList.add('hidden');
+    document.getElementById('winsRatingSection').classList.add('hidden');
+    document.getElementById(s + 'Section').classList.remove('hidden');
+    if(s === 'collection') showCollection();
+    if(s === 'pack') updateTimer();
+    if(s === 'rating') showRating();
+    if(s === 'winsRating') showWinsRating();
+    let btns = document.querySelectorAll('.menu-btn');
+    let sec = ['pack','collection','shop','match','tournament','rating','winsRating'];
+    btns.forEach((b,i) => b.classList.toggle('active', sec[i] === s));
+    updateBalance();
+  }
+  const strongTeams = [
+    { name:"Барселона", players:[{name:"Рафинья",rating:90},{name:"Ямаль",rating:89},{name:"Кубарси",rating:88}] },
+    { name:"Ливерпуль", players:[{name:"Экитике",rating:90},{name:"Ван Дейк",rating:89},{name:"Вирц",rating:89}] },
+    { name:"Реал Мадрид", players:[{name:"Винисиус",rating:85},{name:"Мбаппе",rating:88},{name:"Куртуа",rating:86}] },
+    { name:"Боруссия", players:[{name:"Ольмо",rating:86},{name:"Адейеми",rating:85},{name:"Шлотербек",rating:84}] },
+    { name:"Ман Сити", players:[{name:"Холланд",rating:86},{name:"Б.Силва",rating:87},{name:"Мармуш",rating:79}] },
+    { name:"Реал Бетис", players:[{name:"Касадо",rating:86},{name:"Натан",rating:81},{name:"Еззалзоули",rating:78}] },
+    { name:"Наполи", players:[{name:"Де Брюйне",rating:85},{name:"Нерес",rating:82},{name:"Ланг",rating:80}] },
+    { name:"Милан", players:[{name:"Эндрик",rating:86},{name:"Леао",rating:83},{name:"Нкунку",rating:84}] }
+];
+const weakTeams = [
+    { name:"МЮ", players:[{name:"Кунья",rating:77},{name:"Диалло",rating:70},{name:"Эванс",rating:65}] },
+    { name:"Байер", players:[{name:"Шик",rating:77},{name:"Гримальдо",rating:76},{name:"Паласиос",rating:70}] },
+    { name:"Болонья", players:[{name:"Фройлер",rating:63},{name:"Лукуми",rating:60},{name:"Равалья",rating:60}] },
+    { name:"Челси+Лацио", players:[{name:"Гарначо",rating:70},{name:"Проведел",rating:64},{name:"Нуно Таварес",rating:61}] },
+    { name:"НН", players:[{name:"Равалья",rating:60},{name:"Лыкогианнис",rating:60},{name:"Басич",rating:61}] }
+];
+
+let currentOpponent = null;
+let selectedTeam = [null, null, null];
+
+function startMatch() {
+    let isStrong = Math.random() < 0.2;
+    let pool = isStrong ? strongTeams : weakTeams;
+    let randomIndex = Math.floor(Math.random() * pool.length);
+    currentOpponent = pool[randomIndex];
+    
+    let opponentAvg = currentOpponent.players.reduce((sum,p) => sum + p.rating,0) / 3;
+    let difficultyText = isStrong ? "💪 СИЛЬНЫЙ СОПЕРНИК" : "🟢 СЛАБЫЙ СОПЕРНИК";
+    
+    let playersHtml = currentOpponent.players.map(p => `<div class="player-list">⚽ ${p.name} (${p.rating})</div>`).join('');
+    
+    let html = `
+        <div class="team-card">
+            <div class="team-name">${difficultyText}<br>${currentOpponent.name}</div>
+            <div>Средний рейтинг: ${opponentAvg.toFixed(1)}</div>
+            <div>Состав соперника:</div>
+            ${playersHtml}
+        </div>
+        <div>Выбери 3 своих футболистов:</div>
+        <div id="fighterSelect"></div>
+        <div id="selectedDisplay" style="margin-top:10px;"></div>
+        <button class="pack-btn" onclick="confirmFight()">НАЧАТЬ МАТЧ</button>
+    `;
+    document.getElementById('matchArea').innerHTML = html;
+    
+    selectedTeam = [null, null, null];
+    showFighterSelection();
+}
+
+function showFighterSelection() {
+    let d = getData();
+    let fighters = d.collection.filter(c => c.stars >= 1);
+    if(fighters.length === 0) {
+        document.getElementById('fighterSelect').innerHTML = '<p>❌ Нет футболистов! Открой пак.</p>';
+        return;
+    }
+    
+    let selectHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">';
+    fighters.forEach((f, idx) => {
+        let alreadySelected = selectedTeam.some(s => s && s.name === f.name);
+        if(!alreadySelected) {
+            selectHtml += `<button class="choose-fighter-btn" onclick="selectFighter(${idx})">${f.name} (${f.rating})</button>`;
+        }
+    });
+    selectHtml += '</div>';
+    document.getElementById('fighterSelect').innerHTML = selectHtml;
+    
+    let selectedHtml = '<div>Выбраны:</div>';
+    for(let i=0; i<3; i++) {
+        if(selectedTeam[i]) {
+            selectedHtml += `<span style="background:#e94560;padding:5px 10px;border-radius:15px;margin:5px;display:inline-block;">${selectedTeam[i].name} (${selectedTeam[i].rating})</span>`;
+        } else {
+            selectedHtml += `<span style="background:#2a3a5a;padding:5px 10px;border-radius:15px;margin:5px;display:inline-block;">Слот ${i+1}: пусто</span>`;
+        }
+    }
+    document.getElementById('selectedDisplay').innerHTML = selectedHtml;
+}
+
+function selectFighter(idx) {
+    let d = getData();
+    let fighters = d.collection.filter(c => c.stars >= 1);
+    let fighter = fighters[idx];
+    
+    let slot = -1;
+    for(let i=0; i<3; i++) {
+        if(selectedTeam[i] === null) {
+            slot = i;
+            break;
+        }
+    }
+    
+    if(slot === -1) {
+        tg.showAlert('Уже выбраны 3 футболиста!');
+        return;
+    }
+    
+    selectedTeam[slot] = fighter;
+    showFighterSelection();
+}
+
+function confirmFight() {
+    if(selectedTeam.some(s => s === null)) {
+        tg.showAlert('Выбери всех 3 футболистов!');
+        return;
+    }
+    
+    let myAvg = selectedTeam.reduce((sum,p) => sum + p.rating,0) / 3;
+    let opponentAvg = currentOpponent.players.reduce((sum,p) => sum + p.rating,0) / 3;
+    let diff = myAvg - opponentAvg;
+    let baseChance = 50 + diff * 0.8;
+    let luck = (Math.random() - 0.5) * 20;
+    let finalChance = Math.min(95, Math.max(5, baseChance + luck));
+    let isWin = Math.random() * 100 < finalChance;
+    
+    let myGoals = [];
+    let opponentGoals = [];
+    let totalGoals = isWin ? Math.floor(Math.random() * 3) + 1 : Math.floor(Math.random() * 2);
+    let totalOpponentGoals = isWin ? Math.floor(Math.random() * 2) : Math.floor(Math.random() * 3) + 1;
+    
+    for(let i=0; i<totalGoals; i++) {
+        let scorer = selectedTeam[Math.floor(Math.random() * 3)];
+        let assistant = selectedTeam[Math.floor(Math.random() * 3)];
+        while(assistant.name === scorer.name) assistant = selectedTeam[Math.floor(Math.random() * 3)];
+        myGoals.push({scorer: scorer.name, assistant: assistant.name});
+    }
+    for(let i=0; i<totalOpponentGoals; i++) {
+        let scorer = currentOpponent.players[Math.floor(Math.random() * 3)];
+        let assistant = currentOpponent.players[Math.floor(Math.random() * 3)];
+        while(assistant.name === scorer.name) assistant = currentOpponent.players[Math.floor(Math.random() * 3)];
+        opponentGoals.push({scorer: scorer.name, assistant: assistant.name});
+    }
+    
+    let d = getData();
+    let reward = isWin ? 3 : 1;
+    let newWins = d.wins + (isWin ? 1 : 0);
+    d.coins += reward;
+    d.wins = newWins;
+    saveData(d.collection, d.lastOpen, d.adPacksToday, d.lastAdDate, d.coins, d.coinAdsToday, d.lastCoinAdDate, newWins);
+    updateBalance();
+    
+    let myGoalsHtml = myGoals.map(g => `<div>⚽ ${g.scorer} (ассист: ${g.assistant})</div>`).join('');
+    let opponentGoalsHtml = opponentGoals.map(g => `<div>⚽ ${g.scorer} (ассист: ${g.assistant})</div>`).join('');
+    
+    let html = `
+        <div class="team-card">
+            <div class="team-name">📊 РЕЗУЛЬТАТ МАТЧА</div>
+            <div>⭐ Твоя команда: ${selectedTeam.map(p => p.name).join(', ')}</div>
+            <div>⭐ Средний рейтинг: ${myAvg.toFixed(1)}</div>
+            <div>⭐ Команда ${currentOpponent.name}: ${currentOpponent.players.map(p => p.name).join(', ')}</div>
+            <div>⭐ Средний рейтинг: ${opponentAvg.toFixed(1)}</div>
+            <div>🎲 Шанс победы: ${finalChance.toFixed(1)}%</div>
+            <div class="fight-result">${isWin ? '🏆 ПОБЕДА! +' + reward + ' монеты' : '💔 ПОРАЖЕНИЕ... +' + reward + ' монета'}</div>
+            <div style="margin-top:15px;"><b>⚽ ГОЛЫ:</b></div>
+            <div><b>Твои:</b> ${myGoalsHtml || 'нет голов'}</div>
+            <div><b>${currentOpponent.name}:</b> ${opponentGoalsHtml || 'нет голов'}</div>
+            <div><b>Счёт:</b> ${totalGoals} : ${totalOpponentGoals}</div>
+        </div>
+        <button class="pack-btn" onclick="startMatch()">НОВЫЙ МАТЧ</button>
+        <button class="pack-btn ad-pack-btn" onclick="showSection('pack')">ВЕРНУТЬСЯ</button>
+    `;
+    document.getElementById('matchArea').innerHTML = html;
+  }
+  const strongTeams = [
+    { name:"Барселона", players:[{name:"Рафинья",rating:90},{name:"Ямаль",rating:89},{name:"Кубарси",rating:88}] },
+    { name:"Ливерпуль", players:[{name:"Экитике",rating:90},{name:"Ван Дейк",rating:89},{name:"Вирц",rating:89}] },
+    { name:"Реал Мадрид", players:[{name:"Винисиус",rating:85},{name:"Мбаппе",rating:88},{name:"Куртуа",rating:86}] },
+    { name:"Боруссия", players:[{name:"Ольмо",rating:86},{name:"Адейеми",rating:85},{name:"Шлотербек",rating:84}] },
+    { name:"Ман Сити", players:[{name:"Холланд",rating:86},{name:"Б.Силва",rating:87},{name:"Мармуш",rating:79}] },
+    { name:"Реал Бетис", players:[{name:"Касадо",rating:86},{name:"Натан",rating:81},{name:"Еззалзоули",rating:78}] },
+    { name:"Наполи", players:[{name:"Де Брюйне",rating:85},{name:"Нерес",rating:82},{name:"Ланг",rating:80}] },
+    { name:"Милан", players:[{name:"Эндрик",rating:86},{name:"Леао",rating:83},{name:"Нкунку",rating:84}] }
+];
+const weakTeams = [
+    { name:"МЮ", players:[{name:"Кунья",rating:77},{name:"Диалло",rating:70},{name:"Эванс",rating:65}] },
+    { name:"Байер", players:[{name:"Шик",rating:77},{name:"Гримальдо",rating:76},{name:"Паласиос",rating:70}] },
+    { name:"Болонья", players:[{name:"Фройлер",rating:63},{name:"Лукуми",rating:60},{name:"Равалья",rating:60}] },
+    { name:"Челси+Лацио", players:[{name:"Гарначо",rating:70},{name:"Проведел",rating:64},{name:"Нуно Таварес",rating:61}] },
+    { name:"НН", players:[{name:"Равалья",rating:60},{name:"Лыкогианнис",rating:60},{name:"Басич",rating:61}] }
+];
+
+let currentOpponent = null;
+let selectedTeam = [null, null, null];
+
+function startMatch() {
+    let isStrong = Math.random() < 0.2;
+    let pool = isStrong ? strongTeams : weakTeams;
+    let randomIndex = Math.floor(Math.random() * pool.length);
+    currentOpponent = pool[randomIndex];
+    
+    let opponentAvg = currentOpponent.players.reduce((sum,p) => sum + p.rating,0) / 3;
+    let difficultyText = isStrong ? "💪 СИЛЬНЫЙ СОПЕРНИК" : "🟢 СЛАБЫЙ СОПЕРНИК";
+    
+    let playersHtml = currentOpponent.players.map(p => `<div class="player-list">⚽ ${p.name} (${p.rating})</div>`).join('');
+    
+    let html = `
+        <div class="team-card">
+            <div class="team-name">${difficultyText}<br>${currentOpponent.name}</div>
+            <div>Средний рейтинг: ${opponentAvg.toFixed(1)}</div>
+            <div>Состав соперника:</div>
+            ${playersHtml}
+        </div>
+        <div>Выбери 3 своих футболистов:</div>
+        <div id="fighterSelect"></div>
+        <div id="selectedDisplay" style="margin-top:10px;"></div>
+        <button class="pack-btn" onclick="confirmFight()">НАЧАТЬ МАТЧ</button>
+    `;
+    document.getElementById('matchArea').innerHTML = html;
+    
+    selectedTeam = [null, null, null];
+    showFighterSelection();
+}
+
+function showFighterSelection() {
+    let d = getData();
+    let fighters = d.collection.filter(c => c.stars >= 1);
+    if(fighters.length === 0) {
+        document.getElementById('fighterSelect').innerHTML = '<p>❌ Нет футболистов! Открой пак.</p>';
+        return;
+    }
+    
+    let selectHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">';
+    fighters.forEach((f, idx) => {
+        let alreadySelected = selectedTeam.some(s => s && s.name === f.name);
+        if(!alreadySelected) {
+            selectHtml += `<button class="choose-fighter-btn" onclick="selectFighter(${idx})">${f.name} (${f.rating})</button>`;
+        }
+    });
+    selectHtml += '</div>';
+    document.getElementById('fighterSelect').innerHTML = selectHtml;
+    
+    let selectedHtml = '<div>Выбраны:</div>';
+    for(let i=0; i<3; i++) {
+        if(selectedTeam[i]) {
+            selectedHtml += `<span style="background:#e94560;padding:5px 10px;border-radius:15px;margin:5px;display:inline-block;">${selectedTeam[i].name} (${selectedTeam[i].rating})</span>`;
+        } else {
+            selectedHtml += `<span style="background:#2a3a5a;padding:5px 10px;border-radius:15px;margin:5px;display:inline-block;">Слот ${i+1}: пусто</span>`;
+        }
+    }
+    document.getElementById('selectedDisplay').innerHTML = selectedHtml;
+}
+
+function selectFighter(idx) {
+    let d = getData();
+    let fighters = d.collection.filter(c => c.stars >= 1);
+    let fighter = fighters[idx];
+    
+    let slot = -1;
+    for(let i=0; i<3; i++) {
+        if(selectedTeam[i] === null) {
+            slot = i;
+            break;
+        }
+    }
+    
+    if(slot === -1) {
+        tg.showAlert('Уже выбраны 3 футболиста!');
+        return;
+    }
+    
+    selectedTeam[slot] = fighter;
+    showFighterSelection();
+}
+
+function confirmFight() {
+    if(selectedTeam.some(s => s === null)) {
+        tg.showAlert('Выбери всех 3 футболистов!');
+        return;
+    }
+    
+    let myAvg = selectedTeam.reduce((sum,p) => sum + p.rating,0) / 3;
+    let opponentAvg = currentOpponent.players.reduce((sum,p) => sum + p.rating,0) / 3;
+    let diff = myAvg - opponentAvg;
+    let baseChance = 50 + diff * 0.8;
+    let luck = (Math.random() - 0.5) * 20;
+    let finalChance = Math.min(95, Math.max(5, baseChance + luck));
+    let isWin = Math.random() * 100 < finalChance;
+    
+    let myGoals = [];
+    let opponentGoals = [];
+    let totalGoals = isWin ? Math.floor(Math.random() * 3) + 1 : Math.floor(Math.random() * 2);
+    let totalOpponentGoals = isWin ? Math.floor(Math.random() * 2) : Math.floor(Math.random() * 3) + 1;
+    
+    for(let i=0; i<totalGoals; i++) {
+        let scorer = selectedTeam[Math.floor(Math.random() * 3)];
+        let assistant = selectedTeam[Math.floor(Math.random() * 3)];
+        while(assistant.name === scorer.name) assistant = selectedTeam[Math.floor(Math.random() * 3)];
+        myGoals.push({scorer: scorer.name, assistant: assistant.name});
+    }
+    for(let i=0; i<totalOpponentGoals; i++) {
+        let scorer = currentOpponent.players[Math.floor(Math.random() * 3)];
+        let assistant = currentOpponent.players[Math.floor(Math.random() * 3)];
+        while(assistant.name === scorer.name) assistant = currentOpponent.players[Math.floor(Math.random() * 3)];
+        opponentGoals.push({scorer: scorer.name, assistant: assistant.name});
+    }
+    
+    let d = getData();
+    let reward = isWin ? 3 : 1;
+    let newWins = d.wins + (isWin ? 1 : 0);
+    d.coins += reward;
+    d.wins = newWins;
+    saveData(d.collection, d.lastOpen, d.adPacksToday, d.lastAdDate, d.coins, d.coinAdsToday, d.lastCoinAdDate, newWins);
+    updateBalance();
+    
+    let myGoalsHtml = myGoals.map(g => `<div>⚽ ${g.scorer} (ассист: ${g.assistant})</div>`).join('');
+    let opponentGoalsHtml = opponentGoals.map(g => `<div>⚽ ${g.scorer} (ассист: ${g.assistant})</div>`).join('');
+    
+    let html = `
+        <div class="team-card">
+            <div class="team-name">📊 РЕЗУЛЬТАТ МАТЧА</div>
+            <div>⭐ Твоя команда: ${selectedTeam.map(p => p.name).join(', ')}</div>
+            <div>⭐ Средний рейтинг: ${myAvg.toFixed(1)}</div>
+            <div>⭐ Команда ${currentOpponent.name}: ${currentOpponent.players.map(p => p.name).join(', ')}</div>
+            <div>⭐ Средний рейтинг: ${opponentAvg.toFixed(1)}</div>
+            <div>🎲 Шанс победы: ${finalChance.toFixed(1)}%</div>
+            <div class="fight-result">${isWin ? '🏆 ПОБЕДА! +' + reward + ' монеты' : '💔 ПОРАЖЕНИЕ... +' + reward + ' монета'}</div>
+            <div style="margin-top:15px;"><b>⚽ ГОЛЫ:</b></div>
+            <div><b>Твои:</b> ${myGoalsHtml || 'нет голов'}</div>
+            <div><b>${currentOpponent.name}:</b> ${opponentGoalsHtml || 'нет голов'}</div>
+            <div><b>Счёт:</b> ${totalGoals} : ${totalOpponentGoals}</div>
+        </div>
+        <button class="pack-btn" onclick="startMatch()">НОВЫЙ МАТЧ</button>
+        <button class="pack-btn ad-pack-btn" onclick="showSection('pack')">ВЕРНУТЬСЯ</button>
+    `;
+    document.getElementById('matchArea').innerHTML = html;
+  }
+  const tournamentTeams = [
+    { name:"Барселона", players:[{name:"Торрентс",rating:82},{name:"Ямаль",rating:89},{name:"Кубарси",rating:88}] },
+    { name:"Ливерпуль", players:[{name:"Граванберх",rating:75},{name:"Ван Дейк",rating:89},{name:"Фримпонг",rating:87}] },
+    { name:"Реал Мадрид", players:[{name:"Тчоамени",rating:76},{name:"Мбаппе",rating:88},{name:"Асенсио",rating:71}] },
+    { name:"Боруссия", players:[{name:"Коуто",rating:76},{name:"Фабио Силва",rating:69},{name:"Шлотербек",rating:84}] },
+    { name:"Ман Сити", players:[{name:"Холланд",rating:86},{name:"Б.Силва",rating:87},{name:"Мармуш",rating:79}] },
+    { name:"Реал Бетис", players:[{name:"Касадо",rating:86},{name:"Натан",rating:81},{name:"Еззалзоули",rating:78}] },
+    { name:"Наполи", players:[{name:"Де Брюйне",rating:85},{name:"Лоботка",rating:75},{name:"Ланг",rating:80}] },
+    { name:"Милан", players:[{name:"Эндрик",rating:86},{name:"Рабьот",rating:72},{name:"Нкунку",rating:74}] },
+    { name:"МЮ", players:[{name:"Кунья",rating:77},{name:"Диалло",rating:70},{name:"Эванс",rating:65}] },
+    { name:"Байер", players:[{name:"Шик",rating:77},{name:"Гримальдо",rating:76},{name:"Паласиос",rating:70}] },
+    { name:"Болонья", players:[{name:"Фройлер",rating:63},{name:"Лукуми",rating:60},{name:"Равалья",rating:60}] },
+    { name:"Челси+Лацио", players:[{name:"Гарначо",rating:70},{name:"Проведел",rating:64},{name:"Нуно Таварес",rating:61}] },
+    { name:"НН", players:[{name:"Равалья",rating:60},{name:"Лыкогианнис",rating:60},{name:"Басич",rating:61}] },
+    { name:"Ювентус", players:[{name:"Костич",rating:71},{name:"Консейсау",rating:82},{name:"Калулу",rating:78}] },
+    { name:"Интер", players:[{name:"Мартинес",rating:82},{name:"Димарко",rating:82},{name:"Де Врей",rating:81}] },
+    { name:"Бот", players:[{name:"Проведел",rating:64},{name:"Мама Бальде",rating:64},{name:"Петрович",rating:65}] }
+];
+
+let tournamentState = null;
+let userTeamName = "";
+let userTournamentTeam = [null, null, null];
+
+function startTournament() {
+    let html = `
+        <div class="team-card">
+            <div class="team-name">🏆 РЕГИСТРАЦИЯ НА ТУРНИР</div>
+            <div>Введи название команды:</div>
+            <input type="text" id="teamNameInput" placeholder="Моя команда">
+            <div>Выбери 3 футболистов для турнира:</div>
+            <div id="tournamentFighterSelect"></div>
+            <div id="tournamentSelectedDisplay" style="margin-top:10px;"></div>
+            <button class="pack-btn" onclick="registerTournament()">ЗАРЕГИСТРИРОВАТЬСЯ</button>
+        </div>
+    `;
+    document.getElementById('tournamentArea').innerHTML = html;
+    userTournamentTeam = [null, null, null];
+    showTournamentFighterSelection();
+}
+
+function showTournamentFighterSelection() {
+    let d = getData();
+    let fighters = d.collection.filter(c => c.stars >= 1);
+    if(fighters.length === 0) {
+        document.getElementById('tournamentFighterSelect').innerHTML = '<p>❌ Нет футболистов! Открой пак.</p>';
+        return;
+    }
+    
+    let selectHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">';
+    fighters.forEach((f, idx) => {
+        let alreadySelected = userTournamentTeam.some(s => s && s.name === f.name);
+        if(!alreadySelected) {
+            selectHtml += `<button class="choose-fighter-btn" onclick="selectTournamentFighter(${idx})">${f.name} (${f.rating})</button>`;
+        }
+    });
+    selectHtml += '</div>';
+    document.getElementById('tournamentFighterSelect').innerHTML = selectHtml;
+    
+    let selectedHtml = '<div>Выбраны для турнира:</div>';
+    for(let i=0; i<3; i++) {
+        if(userTournamentTeam[i]) {
+            selectedHtml += `<span style="background:#e94560;padding:5px 10px;border-radius:15px;margin:5px;display:inline-block;">${userTournamentTeam[i].name} (${userTournamentTeam[i].rating})</span>`;
+        } else {
+            selectedHtml += `<span style="background:#2a3a5a;padding:5px 10px;border-radius:15px;margin:5px;display:inline-block;">Слот ${i+1}: пусто</span>`;
+        }
+    }
+    document.getElementById('tournamentSelectedDisplay').innerHTML = selectedHtml;
+}
+
+function selectTournamentFighter(idx) {
+    let d = getData();
+    let fighters = d.collection.filter(c => c.stars >= 1);
+    let fighter = fighters[idx];
+    
+    let slot = -1;
+    for(let i=0; i<3; i++) {
+        if(userTournamentTeam[i] === null) {
+            slot = i;
+            break;
+        }
+    }
+    
+    if(slot === -1) {
+        tg.showAlert('Уже выбраны 3 футболиста!');
+        return;
+    }
+    
+    userTournamentTeam[slot] = fighter;
+    showTournamentFighterSelection();
+}
+
+function registerTournament() {
+    let teamName = document.getElementById('teamNameInput')?.value.trim();
+    if(!teamName) {
+        tg.showAlert('Введи название команды!');
+        return;
+    }
+    if(userTournamentTeam.some(s => s === null)) {
+        tg.showAlert('Выбери всех 3 футболистов!');
+        return;
+    }
+    
+    userTeamName = teamName;
+    
+    let allTournamentTeams = [...tournamentTeams];
+    allTournamentTeams.push({
+        name: userTeamName,
+        players: userTournamentTeam,
+        isUser: true
+    });
+    
+    for(let i = allTournamentTeams.length - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1));
+        [allTournamentTeams[i], allTournamentTeams[j]] = [allTournamentTeams[j], allTournamentTeams[i]];
+    }
+    
+    tournamentState = {
+        teams: allTournamentTeams,
+        round: 1,
+        winners: [],
+        roundWinners: []
+    };
+    
+    startRound();
+}
+
+function startRound() {
+    let teamsToProcess = tournamentState.round === 1 ? tournamentState.teams : tournamentState.roundWinners;
+    let matches = [];
+    
+    for(let i = 0; i < teamsToProcess.length; i += 2) {
+        if(i + 1 < teamsToProcess.length) {
+            matches.push({
+                team1: teamsToProcess[i],
+                team2: teamsToProcess[i+1],
+                result: null
+            });
+        }
+    }
+    
+    tournamentState.currentMatches = matches;
+    tournamentState.currentMatchIndex = 0;
+    tournamentState.matchResults = [];
+    
+    showNextMatch();
+  }
+  function showNextMatch() {
+    if(tournamentState.currentMatchIndex >= tournamentState.currentMatches.length) {
+        if(tournamentState.matchResults.length === 1) {
+            let winner = tournamentState.matchResults[0];
+            let isUserWinner = winner.isUser === true;
+            
+            let html = `
+                <div class="team-card">
+                    <div class="team-name">🏆 ТУРНИР ЗАВЕРШЁН! 🏆</div>
+                    <div class="fight-result" style="font-size:24px;">ПОБЕДИТЕЛЬ: ${winner.name}</div>
+            `;
+            
+            if(isUserWinner) {
+                let d = getData();
+                let card1 = getRandomCard();
+                let card2 = getRandomCard();
+                d.collection.push(card1);
+                d.collection.push(card2);
+                saveData(d.collection, d.lastOpen, d.adPacksToday, d.lastAdDate, d.coins, d.coinAdsToday, d.lastCoinAdDate, d.wins);
+                updateBalance();
+                
+                let card1Img = card1.img ? `<img class="card-img" src="${card1.img}" onerror="this.style.display='none'" style="width:100px; margin:5px;">` : '';
+                let card2Img = card2.img ? `<img class="card-img" src="${card2.img}" onerror="this.style.display='none'" style="width:100px; margin:5px;">` : '';
+                
+                html += `
+                    <div class="reward" style="margin:15px 0;">🎁 ТЫ ПОБЕДИЛ! НАГРАДА: 2 ПАКА 🎁</div>
+                    <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
+                        <div style="background:#0f1422; padding:10px; border-radius:15px; text-align:center;">
+                            ${card1Img}
+                            <div>✨ ${card1.name} ✨</div>
+                            <div>${'⭐'.repeat(card1.stars)} (${card1.rating})</div>
+                        </div>
+                        <div style="background:#0f1422; padding:10px; border-radius:15px; text-align:center;">
+                            ${card2Img}
+                            <div>✨ ${card2.name} ✨</div>
+                            <div>${'⭐'.repeat(card2.stars)} (${card2.rating})</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                html += `<div class="fight-result" style="margin:15px 0;">😔 ТЫ НЕ ПОБЕДИЛ... ПОВЕЗЁТ В СЛЕДУЮЩИЙ РАЗ</div>`;
+            }
+            
+            html += `
+                    <button class="pack-btn" onclick="startTournament()">НОВЫЙ ТУРНИР</button>
+                    <button class="pack-btn ad-pack-btn" onclick="showSection('pack')">ВЕРНУТЬСЯ</button>
+                </div>
+            `;
+            document.getElementById('tournamentArea').innerHTML = html;
+            return;
+        }
+        
+        tournamentState.round++;
+        tournamentState.roundWinners = tournamentState.matchResults;
+        tournamentState.matchResults = [];
+        tournamentState.currentMatchIndex = 0;
+        
+        let roundNames = ["1/8 финала", "1/4 финала", "1/2 финала", "Финал"];
+        let roundName = roundNames[tournamentState.round - 1];
+        
+        let html = `
+            <div class="team-card">
+                <div class="team-name">🏆 ${roundName}</div>
+                <p>Нажми кнопку, чтобы продолжить турнир</p>
+                <button class="pack-btn" onclick="startRound()">НАЧАТЬ ${roundName}</button>
+            </div>
+        `;
+        document.getElementById('tournamentArea').innerHTML = html;
+        return;
+    }
+    
+    let match = tournamentState.currentMatches[tournamentState.currentMatchIndex];
+    let roundNames = ["1/8 финала", "1/4 финала", "1/2 финала", "Финал"];
+    let roundName = roundNames[tournamentState.round - 1];
+    let roundText = "";
+    if(tournamentState.round === 1) roundText = "🏆 1/8 ФИНАЛА 🏆";
+    else if(tournamentState.round === 2) roundText = "🏆 1/4 ФИНАЛА 🏆";
+    else if(tournamentState.round === 3) roundText = "🏆 1/2 ФИНАЛА 🏆";
+    else if(tournamentState.round === 4) roundText = "🏆 ФИНАЛ 🏆";
+    
+    let team1Avg = match.team1.players.reduce((sum,p) => sum + p.rating,0) / 3;
+    let team2Avg = match.team2.players.reduce((sum,p) => sum + p.rating,0) / 3;
+    
+    let team1Players = match.team1.players.map(p => `<div>⚽ ${p.name} (${p.rating})</div>`).join('');
+    let team2Players = match.team2.players.map(p => `<div>⚽ ${p.name} (${p.rating})</div>`).join('');
+    
+    let html = `
+        <div class="team-card">
+            <div class="team-name">${roundText}</div>
+            <div style="display:flex; justify-content:space-between; gap:10px;">
+                <div style="flex:1; background:#0f1422; padding:10px; border-radius:10px;">
+                    <div style="font-weight:bold; color:#ffd966;">${match.team1.name}</div>
+                    <div>Средний рейтинг: ${team1Avg.toFixed(1)}</div>
+                    ${team1Players}
+                </div>
+                <div style="flex:1; background:#0f1422; padding:10px; border-radius:10px;">
+                    <div style="font-weight:bold; color:#ffd966;">${match.team2.name}</div>
+                    <div>Средний рейтинг: ${team2Avg.toFixed(1)}</div>
+                    ${team2Players}
+                </div>
+            </div>
+            <button class="pack-btn" style="margin-top:15px;" onclick="simulateCurrentMatch()">СИМУЛИРОВАТЬ МАТЧ</button>
+        </div>
+    `;
+    document.getElementById('tournamentArea').innerHTML = html;
+}
+
+function simulateCurrentMatch() {
+    let match = tournamentState.currentMatches[tournamentState.currentMatchIndex];
+    
+    let team1Avg = match.team1.players.reduce((sum,p) => sum + p.rating,0) / 3;
+    let team2Avg = match.team2.players.reduce((sum,p) => sum + p.rating,0) / 3;
+    let diff = team1Avg - team2Avg;
+    let baseChance = 50 + diff * 0.8;
+    let luck = (Math.random() - 0.5) * 20;
+    let finalChance = Math.min(95, Math.max(5, baseChance + luck));
+    let isTeam1Win = Math.random() * 100 < finalChance;
+    
+    let winner = isTeam1Win ? match.team1 : match.team2;
+    match.result = winner;
+    tournamentState.matchResults.push(winner);
+    
+    let goals1 = Math.floor(Math.random() * 3);
+    let goals2 = Math.floor(Math.random() * 3);
+    if(isTeam1Win && goals1 <= goals2) goals1 = goals2 + 1;
+    if(!isTeam1Win && goals2 <= goals1) goals2 = goals1 + 1;
+    
+    let scorer1 = match.team1.players[Math.floor(Math.random() * 3)];
+    let scorer2 = match.team2.players[Math.floor(Math.random() * 3)];
+    
+    let roundNames = ["1/8 финала", "1/4 финала", "1/2 финала", "Финал"];
+    let roundName = roundNames[tournamentState.round - 1];
+    let roundText = "";
+    if(tournamentState.round === 1) roundText = "🏆 1/8 ФИНАЛА 🏆";
+    else if(tournamentState.round === 2) roundText = "🏆 1/4 ФИНАЛА 🏆";
+    else if(tournamentState.round === 3) roundText = "🏆 1/2 ФИНАЛА 🏆";
+    else if(tournamentState.round === 4) roundText = "🏆 ФИНАЛ 🏆";
+    
+    let html = `
+        <div class="team-card">
+            <div class="team-name">${roundText}</div>
+            <div style="background:#0f1422;padding:15px;border-radius:15px;">
+                <div class="team-name">${match.team1.name} ${goals1} : ${goals2} ${match.team2.name}</div>
+                <div>⚽ ${match.team1.name}: ${scorer1.name} (${goals1} гол)</div>
+                <div>⚽ ${match.team2.name}: ${scorer2.name} (${goals2} гол)</div>
+                <div style="margin-top:10px;">🏆 Победитель: ${winner.name}</div>
+            </div>
+            <button class="pack-btn" style="margin-top:15px;" onclick="nextMatch()">ДАЛЕЕ</button>
+        </div>
+    `;
+    document.getElementById('tournamentArea').innerHTML = html;
+}
+
+function nextMatch() {
+    tournamentState.currentMatchIndex++;
+    showNextMatch();
+}
+
+resetDay();
+updateTimer();
+updateLimits();
+updateBalance();
+updateRating();
+updateWinsRating();
+setInterval(updateTimer, 60000);
+showSection('pack');
+</script>
+</body>
+</html>no
