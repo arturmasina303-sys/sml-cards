@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SML Карточки - Бета</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src='https://static.monetag.io/sdk.js' data-zone='10759776' data-sdk='show_10759776'></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+        body{background:linear-gradient(135deg,#0a0f2a,#0a1a3a);font-family:'Segoe UI',Arial,sans-serif;padding:20px;color:#fff;min-height:100vh}
+        .container{max-width:400px;margin:0 auto}
+        .card{background:rgba(26,42,74,0.95);backdrop-filter:blur(10px);border-radius:20px;padding:20px;margin-bottom:20px;box-shadow:0 5px 15px rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1)}
+        .menu-buttons{display:flex;gap:10px;margin-bottom:20px}
+        .menu-btn{flex:1;background:#2a3a5a;border:none;color:#fff;padding:12px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer}
+        .menu-btn.active{background:#e94560}
+        .pack-btn{background:linear-gradient(135deg,#e94560,#b52b43);width:100%;padding:15px;font-size:18px;border:none;color:#fff;border-radius:12px;cursor:pointer;font-weight:700;margin-bottom:15px}
+        .ad-pack-btn{background:linear-gradient(135deg,#2ecc71,#27ae60)}
+        .result-area{background:rgba(15,20,34,0.8);border-radius:15px;padding:20px;text-align:center;margin-top:15px;min-height:150px}
+        .card-img{width:200px;max-width:100%;border-radius:15px;margin:10px auto;display:block}
+        .timer{font-size:14px;color:#aaa;margin-top:15px;text-align:center}
+        .collection-grid{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-height:500px;overflow-y:auto;padding:10px}
+        .collection-card{width:100px;background:rgba(15,20,34,0.8);border-radius:12px;padding:8px;text-align:center}
+        .collection-card img{width:80px;height:80px;border-radius:10px;object-fit:cover}
+        .collection-card .name{font-size:11px;margin-top:5px;color:#ffd966;font-weight:bold}
+        .ad-limit{font-size:12px;color:#aaa;text-align:center;margin-top:5px}
+        .balance{background:rgba(15,20,34,0.8);border-radius:15px;padding:12px;text-align:center;margin-bottom:15px;font-size:18px;font-weight:700;border:1px solid #ffd966}
+        .shop-item{background:rgba(15,20,34,0.8);border-radius:15px;padding:15px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+        .shop-price{background:#ffd966;color:#1a2a4a;padding:8px 15px;border-radius:20px;font-weight:700}
+        .shop-btn{background:#e94560;border:none;color:#fff;padding:8px 20px;border-radius:20px;cursor:pointer}
+        .hidden{display:none}
+        h3{margin-bottom:15px;text-align:center;color:#ffd966}
+        ::-webkit-scrollbar{width:5px}
+        ::-webkit-scrollbar-track{background:#1a2a4a;border-radius:10px}
+        ::-webkit-scrollbar-thumb{background:#e94560;border-radius:10px}
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="menu-buttons">
+        <button class="menu-btn" onclick="showSection('pack')">📦 Пак</button>
+        <button class="menu-btn" onclick="showSection('collection')">📋 Коллекция</button>
+        <button class="menu-btn" onclick="showSection('shop')">🛒 Магазин</button>
+    </div>
+    <div id="packSection" class="card">
+        <div class="balance">🪙 Монеты: <span id="coinBalance">0</span></div>
+        <button class="pack-btn" onclick="openFreePack()">📦 БЕСПЛАТНЫЙ ПАК (раз/2ч)</button>
+        <div class="timer" id="timer">✅ Пак доступен</div>
+        <button class="pack-btn ad-pack-btn" onclick="openAdPack()">🎥 РЕКЛАМНЫЙ ПАК (7/день)</button>
+        <div class="ad-limit" id="adLimitDisplay">🎥 Осталось рекламных паков: 7</div>
+        <button class="pack-btn" onclick="watchAdForCoins()">💰 РЕКЛАМА ЗА МОНЕТЫ (50) (2/день)</button>
+        <div class="ad-limit" id="coinAdLimitDisplay">💰 Осталось реклам за монеты: 2</div>
+        <div id="packResult" class="result-area"><p>🎮 Нажми на кнопку!</p></div>
+    </div>
+    <div id="collectionSection" class="card hidden">
+        <h3>🎴 Моя коллекция</h3>
+        <div id="collectionGrid" class="collection-grid"><p>📭 Загрузка...</p></div>
+    </div>
+    <div id="shopSection" class="card hidden">
+        <h3>🛒 МАГАЗИН</h3>
+        <div class="balance">🪙 Монеты: <span id="shopCoinBalance">0</span></div>
+        <div class="shop-item">
+            <div><b>⚽ Аршавин</b><br><small>3⭐ | Рейтинг 82</small></div>
+            <div class="shop-price">1250 🪙</div>
+            <button class="shop-btn" onclick="buyArshavin()">Купить</button>
+        </div>
+        <div id="shopResult" class="result-area"><p>🛍️ Выбери товар</p></div>
+    </div>
+</div>
+<script>
+let tg = window.Telegram.WebApp;
+tg.ready();
+tg.expand();
+const ZONE_ID = "10759776";
+  const allCards = [
+{name:"Mbappe",img:"IMG_20260323_195529_238.jpg",stars:3,rating:88},
+{name:"Pau Cubarsi",img:"IMG_20260323_195527_165.jpg",stars:3,rating:88},
+{name:"Alisson",img:"IMG_20260324_104243_692.jpg",stars:3,rating:88},
+{name:"Kane",img:"IMG_20260324_104239_640.jpg",stars:3,rating:88},
+{name:"Frimpong",img:"IMG_20260323_195518_778.jpg",stars:3,rating:87},
+{name:"Musiala",img:"IMG_20260323_195515_925.jpg",stars:3,rating:87},
+{name:"Haaland",img:"IMG_20260323_195515_950.jpg",stars:3,rating:86},
+{name:"Dani Olmo",img:"IMG_20260323_195516_426.jpg",stars:3,rating:86},
+{name:"Casado",img:"IMG_20260323_195529_812.jpg",stars:3,rating:86},
+{name:"Courtois",img:"IMG_20260323_195526_288.jpg",stars:3,rating:86},
+{name:"Endrick",img:"IMG_20260323_231212_155.jpg",stars:3,rating:86},
+{name:"Dembele",img:"IMG_20260323_231208_432.jpg",stars:3,rating:86},
+{name:"Vinicius Jr",img:"IMG_20260323_195526_332.jpg",stars:3,rating:85},
+{name:"Eder Militao",img:"IMG_20260323_195524_896.jpg",stars:3,rating:85},
+{name:"Adeyemi",img:"IMG_20260323_195530_071.jpg",stars:3,rating:85},
+{name:"De Bruyne",img:"IMG_20260323_231212_282.jpg",stars:3,rating:85},
+{name:"Gyokeres",img:"IMG_20260323_195516_434.jpg",stars:3,rating:84},
+{name:"Savinho",img:"IMG_20260323_195516_194.jpg",stars:3,rating:84},
+{name:"Schlotterbeck",img:"IMG_20260323_231220_991.jpg",stars:3,rating:84},
+{name:"Bellingham",img:"IMG_20260323_195526_538.jpg",stars:3,rating:83},
+{name:"Camavinga",img:"IMG_20260323_231219_622.jpg",stars:3,rating:83},
+{name:"Hakimi",img:"IMG_20260323_231219_981.jpg",stars:3,rating:83},
+{name:"Casemiro",img:"IMG_20260323_231210_112.jpg",stars:3,rating:83},
+{name:"Woltemade",img:"IMG_20260323_231208_619.jpg",stars:3,rating:83},
+{name:"Rafael Leao",img:"IMG_20260323_231208_327.jpg",stars:3,rating:83},
+{name:"Mac Allister",img:"IMG_20260323_231201_691.jpg",stars:3,rating:83},
+{name:"Bakayoko",img:"IMG_20260324_104258_181.jpg",stars:3,rating:83},
+{name:"Francisco Conceicao",img:"IMG_20260323_231157_075.jpg",stars:3,rating:82},
+{name:"Martinez",img:"IMG_20260323_231202_174.jpg",stars:3,rating:82},
+{name:"Dimarco",img:"IMG_20260323_231201_158.jpg",stars:3,rating:82},
+{name:"David Neres",img:"IMG_20260323_231159_113.jpg",stars:3,rating:82},
+{name:"Torrents",img:"IMG_20260323_195521_545.jpg",stars:3,rating:82},
+{name:"De Vrij",img:"IMG_20260323_231200_315.jpg",stars:3,rating:81},
+{name:"Natan",img:"IMG_20260323_231210_600.jpg",stars:3,rating:81},
+{name:"McTominay",img:"IMG_20260324_100110_836.jpg",stars:3,rating:80},
+{name:"Estupinan",img:"IMG_20260323_231157_441.jpg",stars:3,rating:80},
+{name:"Lang",img:"IMG_20260323_231159_207.jpg",stars:3,rating:80},
+{name:"Maddison",img:"IMG_20260323_231207_643.jpg",stars:3,rating:80},
+{name:"David Raya",img:"IMG_20260323_231219_555.jpg",stars:3,rating:80},
+{name:"Nusa",img:"IMG_20260323_195529_645.jpg",stars:3,rating:80},
+{name:"Mikel Merino",img:"IMG_20260323_231219_915.jpg",stars:2,rating:79},
+{name:"Marmoush",img:"IMG_20260323_231208_145.jpg",stars:2,rating:79},
+{name:"Doue",img:"IMG_20260323_231208_479.jpg",stars:2,rating:79},
+{name:"Nuno Mendes",img:"IMG_20260324_100110_446.jpg",stars:2,rating:79},
+{name:"Kalulu",img:"IMG_20260323_195535_625.jpg",stars:2,rating:78},
+{name:"Ezzalzouli",img:"IMG_20260323_231210_374.jpg",stars:2,rating:78},
+{name:"Mbeumo",img:"IMG_20260323_231208_214.jpg",stars:2,rating:78},
+{name:"Eze",img:"IMG_20260323_231208_490.jpg",stars:2,rating:78},
+{name:"Doku",img:"IMG_20260323_195516_461.jpg",stars:2,rating:77},
+{name:"Lukeba",img:"IMG_20260323_231219_031.jpg",stars:2,rating:77},
+{name:"Klostermann",img:"IMG_20260323_231219_672.jpg",stars:2,rating:77},
+{name:"Sancho",img:"IMG_20260323_231208_157.jpg",stars:2,rating:77},
+{name:"Matheus Cunha",img:"IMG_20260323_231208_420.jpg",stars:2,rating:77},
+{name:"Schick",img:"IMG_20260324_100110_551.jpg",stars:2,rating:77},
+{name:"Greenwood",img:"IMG_20260324_100110_478.jpg",stars:2,rating:77},
+{name:"Grimaldo",img:"IMG_20260324_100111_337.jpg",stars:2,rating:76},
+{name:"Hojlund",img:"IMG_20260323_195534_994.jpg",stars:2,rating:76},
+{name:"Tchouameni",img:"IMG_20260323_195526_698.jpg",stars:2,rating:76},
+{name:"Richarlison",img:"IMG_20260323_231210_407.jpg",stars:2,rating:76},
+{name:"Yan Couto",img:"IMG_20260324_095739_877.jpg",stars:2,rating:76},
+{name:"Lobotka",img:"IMG_20260323_195534_813.jpg",stars:2,rating:75},
+{name:"Dro",img:"IMG_20260323_195521_595.jpg",stars:2,rating:75},
+{name:"Gravenberch",img:"IMG_20260323_195518_858.jpg",stars:2,rating:75},
+{name:"Frattesi",img:"IMG_20260323_231219_307.jpg",stars:2,rating:75},
+{name:"Elmas",img:"IMG_20260323_231219_524.jpg",stars:2,rating:74},
+{name:"Nkunku",img:"IMG_20260323_231212_893.jpg",stars:2,rating:74},
+{name:"Rashford",img:"IMG_20260323_195535_510.jpg",stars:2,rating:74},
+{name:"David",img:"IMG_20260324_100111_345.jpg",stars:2,rating:73},
+{name:"Rabiot",img:"IMG_20260324_100110_864.jpg",stars:2,rating:72},
+{name:"Hradecky",img:"IMG_20260324_100111_244.jpg",stars:2,rating:71},
+{name:"Asensio",img:"IMG_20260323_195526_899.jpg",stars:2,rating:71},
+{name:"Mastantuono",img:"IMG_20260323_195523_002.jpg",stars:2,rating:71},
+{name:"Elanga",img:"IMG_20260323_231219_589.jpg",stars:2,rating:71},
+{name:"Kostic",img:"IMG_20260323_231212_075.jpg",stars:2,rating:71},
+{name:"Palacios",img:"IMG_20260324_100111_085.jpg",stars:2,rating:70},
+{name:"Chiesa",img:"IMG_20260323_195518_574.jpg",stars:2,rating:70},
+{name:"Diallo",img:"IMG_20260323_195535_536.jpg",stars:2,rating:70},
+{name:"Pavlidis",img:"IMG_20260323_231214_628.jpg",stars:2,rating:70},
+{name:"Alejandro Garnacho",img:"IMG_20260323_231211_962.jpg",stars:2,rating:70},
+{name:"Bellingham_70",img:"IMG_20260323_231205_480.jpg",stars:2,rating:70},
+{name:"Fabio Silva",img:"IMG_20260324_095729_482.jpg",stars:1,rating:69},
+{name:"Kolo Muani",img:"IMG_20260324_100110_860.jpg",stars:1,rating:68},
+{name:"Lindelof",img:"IMG_20260323_195747.jpg",stars:1,rating:68},
+{name:"Gimenez",img:"IMG_20260324_102640_702.jpg",stars:1,rating:68},
+{name:"Kubo",img:"IMG_20260324_102638_506.jpg",stars:1,rating:67},
+{name:"Bonny",img:"IMG_20260323_195529_412.jpg",stars:1,rating:66},
+{name:"Lemar",img:"IMG_20260324_102639_056.jpg",stars:1,rating:66},
+{name:"Petrovic",img:"IMG_20260323_195534_925.jpg",stars:1,rating:65},
+{name:"Kraft",img:"IMG_20260324_102638_763.jpg",stars:1,rating:65},
+{name:"Evans",img:"IMG_20260324_102638_823.jpg",stars:1,rating:65},
+{name:"Giroud",img:"IMG_20260324_102641_003.jpg",stars:1,rating:65},
+{name:"Mamabalde",img:"IMG_20260323_195529_399.jpg",stars:1,rating:64},
+{name:"Provedel",img:"IMG_20260324_102639_077.jpg",stars:1,rating:64},
+{name:"Miley",img:"IMG_20260323_195534_964.jpg",stars:1,rating:63},
+{name:"Freuler",img:"IMG_20260324_102638_160.jpg",stars:1,rating:63},
+{name:"Fofana",img:"IMG_20260323_195535_044.jpg",stars:1,rating:62},
+{name:"Mauro Junior",img:"IMG_20260324_102639_062.jpg",stars:1,rating:62},
+{name:"Basic",img:"IMG_20260323_195529_366.jpg",stars:1,rating:61},
+{name:"Nuno Tavares",img:"IMG_20260324_102638_376.jpg",stars:1,rating:61},
+{name:"Lykogiannis",img:"IMG_20260323_195535_272.jpg",stars:1,rating:60},
+{name:"Ravaglia",img:"IMG_20260324_102636_825.jpg",stars:1,rating:60},
+{name:"Lucumi",img:"IMG_20260324_102638_184.jpg",stars:1,rating:60}
+];
+const rarityChance = [{stars:1,chance:55},{stars:2,chance:35},{stars:3,chance:10}];
+function getRandomCard(){let r=Math.floor(Math.random()*100)+1;let s=1;let sum=0;for(let i=0;i<rarityChance.length;i++){sum+=rarityChance[i].chance;if(r<=sum){s=rarityChance[i].stars;break}}let c=allCards.filter(c=>c.stars===s);return c.length?c[Math.floor(Math.random()*c.length)]:allCards[0]}
+function getData(){return{collection:JSON.parse(localStorage.getItem('collection')||'[]'),lastOpen:parseInt(localStorage.getItem('lastOpen')||'0'),adPacksToday:parseInt(localStorage.getItem('adPacksToday')||'0'),lastAdDate:localStorage.getItem('lastAdDate')||'',coins:parseInt(localStorage.getItem('coins')||'0'),coinAdsToday:parseInt(localStorage.getItem('coinAdsToday')||'0'),lastCoinAdDate:localStorage.getItem('lastCoinAdDate')||''}}
+function saveData(c,lo,ap,la,co,cat,lca){localStorage.setItem('collection',JSON.stringify(c));if(lo!==undefined)localStorage.setItem('lastOpen',lo);if(ap!==undefined)localStorage.setItem('adPacksToday',ap);if(la!==undefined)localStorage.setItem('lastAdDate',la);if(co!==undefined)localStorage.setItem('coins',co);if(cat!==undefined)localStorage.setItem('coinAdsToday',cat);if(lca!==undefined)localStorage.setItem('lastCoinAdDate',lca);updateBalanceDisplay()}
+function resetAdCounterIfNewDay(){let d=getData();let t=new Date().toDateString();if(d.lastAdDate!==t){d.adPacksToday=0;d.lastAdDate=t;saveData(d.collection,d.lastOpen,0,t,d.coins,d.coinAdsToday,d.lastCoinAdDate)}if(d.lastCoinAdDate!==t){d.coinAdsToday=0;d.lastCoinAdDate=t;saveData(d.collection,d.lastOpen,d.adPacksToday,d.lastAdDate,d.coins,0,t)}updateAdLimitDisplay();updateCoinAdLimitDisplay()}
+function updateAdLimitDisplay(){let d=getData();let r=7-(d.adPacksToday||0);let el=document.getElementById('adLimitDisplay');if(el)el.innerHTML=`🎥 Осталось рекламных паков: ${r}`}
+function updateCoinAdLimitDisplay(){let d=getData();let r=2-(d.coinAdsToday||0);let el=document.getElementById('coinAdLimitDisplay');if(el)el.innerHTML=`💰 Осталось реклам за монеты: ${r}`}
+function updateBalanceDisplay(){let d=getData();let ce=document.getElementById('coinBalance');let sce=document.getElementById('shopCoinBalance');if(ce)ce.innerText=d.coins;if(sce)sce.innerText=d.coins}
+function displayCardResult(t,c,e){let img=c.img?`<img class="card-img" src="${c.img}" onerror="this.style.display='none'">`:'<div style="width:200px;height:200px;background:#2a3a5a;border-radius:15px;display:flex;align-items:center;justify-content:center;margin:10px auto;font-size:64px">🎴</div>';document.getElementById('packResult').innerHTML=`<h2>${t}</h2>${img}<div style="font-size:24px;margin:10px 0;">✨ ${c.name} ✨</div><div style="font-size:20px;">${'⭐'.repeat(c.stars)}</div><div>📊 Рейтинг: ${c.rating}</div>${e}`}
+function giveAdPackReward(){let d=getData();let c=getRandomCard();d.collection.push(c);d.adPacksToday++;saveData(d.collection,d.lastOpen,d.adPacksToday,d.lastAdDate,d.coins,d.coinAdsToday,d.lastCoinAdDate);updateAdLimitDisplay();displayCardResult('🎥 РЕКЛАМНЫЙ ПАК! 🎥',c);tg.showAlert(`🎴 ${c.name} (${'⭐'.repeat(c.stars)})`)}
+function openAdPack(){resetAdCounterIfNewDay();let d=getData();if(d.adPacksToday>=7){tg.showAlert('❌ Лимит на сегодня!');return}if(typeof monetag!=='undefined'&&monetag){monetag('showRewardedAd',ZONE_ID,function(s){if(s)giveAdPackReward();else tg.showAlert('❌ Реклама не просмотрена')})}else{tg.showAlert('🎥 Тестовый режим');giveAdPackReward()}}
+function openFreePack(){let d=getData();let n=Date.now();let th=2*60*60*1000;if(d.lastOpen&&n-d.lastOpen<th){let l=th-(n-d.lastOpen);let h=Math.floor(l/3600000);let m=Math.floor((l%3600000)/60000);tg.showAlert(`⏳ Подожди ${h}ч ${m}мин`);return}let c=getRandomCard();d.collection.push(c);saveData(d.collection,n,d.adPacksToday,d.lastAdDate,d.coins,d.coinAdsToday,d.lastCoinAdDate);displayCardResult('🎴 ВЫПАЛО! 🎴',c);tg.showAlert(`🎴 ${c.name} (${'⭐'.repeat(c.stars)})`);updateTimer()}
+function watchAdForCoins(){resetAdCounterIfNewDay();let d=getData();if(d.coinAdsToday>=2){tg.showAlert('❌ Лимит на сегодня!');return}function add(){let nc=d.coins+50;d.coinAdsToday++;saveData(d.collection,d.lastOpen,d.adPacksToday,d.lastAdDate,nc,d.coinAdsToday,d.lastCoinAdDate);updateCoinAdLimitDisplay();updateBalanceDisplay();document.getElementById('packResult').innerHTML=`<h2>💰 +50 МОНЕТ!</h2><p>💰 Баланс: ${nc}</p>`;tg.showAlert(`💰 +50 монет!`)}if(typeof monetag!=='undefined'&&monetag){monetag('showRewardedAd',ZONE_ID,function(s){if(s)add();else tg.showAlert('❌ Реклама не просмотрена')})}else{tg.showAlert('🎥 Тестовый режим');add()}}
+function buyArshavin(){let d=getData();let p=1250;if(d.coins<p){tg.showAlert(`❌ Нужно ${p} монет`);return}if(d.collection.some(c=>c.name==="Arshavin")){tg.showAlert('❌ Уже есть Аршавин');return}let nc=d.coins-p;let a={name:"Arshavin",img:"arshavin.jpg",stars:3,rating:82};d.collection.push(a);saveData(d.collection,d.lastOpen,d.adPacksToday,d.lastAdDate,nc,d.coinAdsToday,d.lastCoinAdDate);document.getElementById('shopResult').innerHTML=`<h2>🎴 КУПЛЕНО!</h2><div style="font-size:24px;">⚽ Аршавин ⚽</div><div>⭐⭐⭐ Рейтинг:82</div><div>💰 Осталось: ${nc}</div>`;tg.showAlert(`🎴 Куплен Аршавин!`);updateBalanceDisplay()}
+function showCollection(){let d=getData();let c=d.collection;if(c.length===0){document.getElementById('collectionGrid').innerHTML='<p>📭 Нет карточек</p>';return}let u={};c.forEach(card=>{let k=card.name;if(!u[k])u[k]={...card,count:1};else u[k].count++});let h='';Object.values(u).forEach(card=>{let img=card.img?`<img src="${card.img}" onerror="this.style.display='none'">`:'<div style="width:80px;height:80px;background:#2a3a5a;border-radius:10px;display:flex;align-items:center;justify-content:center">🎴</div>';h+=`<div class="collection-card">${img}<div class="name">${card.name}</div><div>${'⭐'.repeat(card.stars)}(${card.rating})</div><div style="color:#ffd966;">✖️${card.count}</div></div>`});document.getElementById('collectionGrid').innerHTML=h}
+function updateTimer(){let d=getData();let n=Date.now();let th=2*60*60*1000;let t=document.getElementById('timer');if(d.lastOpen&&n-d.lastOpen<th){let l=th-(n-d.lastOpen);let h=Math.floor(l/3600000);let m=Math.floor((l%3600000)/60000);t.textContent=`⏱️ Следующий пак через ${h}ч ${m}мин`}else{t.textContent='✅ Бесплатный пак доступен!'}}
+function showSection(s){document.getElementById('packSection').classList.add('hidden');document.getElementById('collectionSection').classList.add('hidden');document.getElementById('shopSection').classList.add('hidden');document.getElementById(s+'Section').classList.remove('hidden');if(s==='collection')showCollection();if(s==='pack')updateTimer();let btns=document.querySelectorAll('.menu-btn');let sec=['pack','collection','shop'];btns.forEach((b,i)=>{b.classList.toggle('active',sec[i]===s)});updateBalanceDisplay()}
+resetAdCounterIfNewDay();updateTimer();updateAdLimitDisplay();updateCoinAdLimitDisplay();updateBalanceDisplay();setInterval(updateTimer,60000);showSection('pack');
